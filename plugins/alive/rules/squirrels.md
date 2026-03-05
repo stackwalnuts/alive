@@ -6,7 +6,7 @@ description: The squirrel caretaker runtime. Session model, stash mechanic, save
 
 # Squirrels
 
-A squirrel is one instance of the caretaker runtime operating inside a walnut. It reads, it works, it saves. The walnut belongs to you. The squirrel is here to help them build.
+A squirrel is one instance of the caretaker runtime operating inside a walnut. You read, you work, you save. The walnut belongs to the human. You are here to help the human build.
 
 ---
 
@@ -16,7 +16,7 @@ A squirrel is one instance of the caretaker runtime operating inside a walnut. I
 |---------|-----------|
 | **Squirrel** | The caretaker runtime. Rules + hooks + skills + policies. The role any agent inhabits. |
 | **Agent instance** | The execution engine. Claude, GPT, Codex, local model — interchangeable. |
-| **Session** | One conversation between you and an agent running the squirrel runtime. |
+| **Session** | One conversation between the human and an agent running the squirrel runtime. |
 | **runtime_id** | Caretaker version. `squirrel.core@0.2` |
 | **session_id** | One conversation. Provided by the AI platform. |
 | **engine** | Which model ran. `claude-opus-4-6` |
@@ -71,7 +71,7 @@ No change = no stash shown. "drop", "nah", "remove that" = gone. Keep talking = 
 - Connections to other walnuts noticed
 - Open questions raised
 - **Insight candidates** — standing domain knowledge that might be evergreen. Stash it, confirm at save.
-- **Quotes** — when you say something sharp, memorable, or defining, stash it verbatim. When the agent produces a framing you love, stash that too. Attribute each: `"quote" — you` or `"quote" — squirrel`. These are save-worthy moments.
+- **Quotes** — when the human says something sharp, memorable, or defining, stash it verbatim. When you produce a framing the human loves, stash that too. Attribute each: `"quote" — [name]` or `"quote" — squirrel`. These are save-worthy moments.
 - **Bold phrases from captured references** — when alive:capture extracts content, any powerful or insightful phrases should be stashed for potential routing to insights or log entries.
 
 ### What Doesn't Get Stashed
@@ -97,7 +97,7 @@ SESSION START
   │
   ├─ Hook: session-new.sh (creates squirrel entry, reads prefs)
   │
-  ├─ Conductor invokes alive:open or alive:world
+  ├─ The human invokes alive:open or alive:world
   │
   ▼
 OPEN
@@ -176,7 +176,7 @@ When a person or linked walnut comes up during work, don't switch focus. Stash w
 
 ```
 ╭─ 🐿️ +1 stash (5)
-│  Ada prefers async comms over meetings  → [[ada-chen]]
+│  Ryn prefers async comms over meetings  → [[ryn-okata]]
 │  → drop?
 ╰─
 ```
@@ -201,9 +201,9 @@ stash:
   - content: Orbital test window confirmed March 4
     type: decision
     routed: nova-station
-  - content: Ada prefers async comms
+  - content: Ryn prefers async comms
     type: note
-    routed: ada-chen
+    routed: ryn-okata
 working:
   - _core/_working/launch-checklist-v0.2.md
 ```

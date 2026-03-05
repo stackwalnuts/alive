@@ -33,16 +33,16 @@ Show recent sessions across all walnuts.
 ```
 ╭─ 🐿️ recall — recent sessions
 │
-│   1. 2a8c95e9  alive-gtm     today       opus-4-6
+│   1. 2a8c95e9  orbit-lab     today       opus-4-6
 │      System architecture, blueprint, 8 skills built, shipped v0.1-beta
 │
-│   2. a44d04aa  alive-gtm     yesterday   opus-4-6
+│   2. a44d04aa  orbit-lab     yesterday   opus-4-6
 │      alivecomputer.com rebuilt, whitepaper v0.3, brand locked
 │
-│   3. 5551126e  alive-gtm     Feb 22      opus-4-6
+│   3. 5551126e  orbit-lab     Feb 22      opus-4-6
 │      Companion app, web installer, plugin v0.1-beta released
 │
-│   4. fb6ec273  alive-gtm     Feb 21      opus-4-6
+│   4. fb6ec273  orbit-lab     Feb 21      opus-4-6
 │      Otter transcript extraction, website built, manifesto captured
 │
 │   5. 224e54bb  walnut-world  Feb 22      opus-4-6
@@ -64,7 +64,7 @@ Surface them with a visual marker:
 │   1. 2a8c95e9  nova-station  today       opus-4-6
 │      System architecture, 8 skills built
 │
-│   2. a44d04aa  alive-gtm     yesterday   opus-4-6
+│   2. a44d04aa  orbit-lab     yesterday   opus-4-6
 │      Website rebuild, brand locked
 │
 │   ⚠ c48b658d  (unsaved)    today       opus-4-6
@@ -154,7 +154,7 @@ context to have a useful conversation about this work.]
 - Subagents dispatched — what they were asked to do and what they found
 - The chronological progression: what happened first, what came next, how the work evolved
 
-Be specific. "Modified the config" is useless. "/Users/will/project/config.yaml — added
+Be specific. "Modified the config" is useless. "/Users/you/project/config.yaml — added
 retry logic with 3 attempts and exponential backoff because the API was rate-limiting" is
 useful.]
 
@@ -206,7 +206,7 @@ When you selects heavy revive, invoke the `alive:heavy-revive` skill via the Ski
 
 The power move. Pick 2-5 sessions and merge their context.
 
-"Give me everything from the last 3 alive-gtm sessions"
+"Give me everything from the last 3 orbit-lab sessions"
 "Combine the shielding research session with yesterday's vendor call"
 
 ```
@@ -276,7 +276,7 @@ Different platforms store session data in different places. The squirrel resolve
 
 **The squirrel entry is the universal layer.** It works across every platform. Transcripts are a bonus when the platform supports them. The system never breaks if transcripts aren't available — it just has less depth.
 
-**Privacy note:** Transcripts live on you's machine in Claude Code's project directory. They never leave. Recall reads them locally.
+**Privacy note:** Transcripts live on your machine in Claude Code's project directory. They never leave. Recall reads them locally.
 
 ---
 

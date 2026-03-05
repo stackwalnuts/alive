@@ -33,7 +33,7 @@ Scan `_core/_working/` across walnuts. Find drafts by name, version, age, squirr
 Search `_core/_references/` companion .md files. Match on frontmatter: type, date, source, participants, subject.
 
 ### 7. Raw Reference Search (last resort, expensive)
-Load actual raw files. Only on explicit request — "read me that email from Kai."
+Load actual raw files. Only on explicit request — "read me that email from Jax."
 
 ---
 
@@ -62,7 +62,7 @@ Find searches across ALL walnuts by default. Results show which walnut each matc
 When a match is found, surface connected walnuts:
 
 ```
-╭─ 🐿️ [[ada-chen]] is mentioned in this entry.
+╭─ 🐿️ [[ryn-okata]] is mentioned in this entry.
 │  She also appears in: nova-station, glass-cathedral
 │  Load her context?
 ╰─

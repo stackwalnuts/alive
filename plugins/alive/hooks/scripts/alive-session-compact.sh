@@ -1,11 +1,11 @@
 #!/bin/bash
 # Hook 1c: Session Compact — SessionStart (compact)
-# Re-injects stash + walnut context after context compression.
+# Re-injects stash + walnut context + preferences after context compression.
 
 set -euo pipefail
 
 find_world() {
-  local dir="$PWD"
+  local dir="${CLAUDE_PROJECT_DIR:-$PWD}"
   while [ "$dir" != "/" ]; do
     if [ -d "$dir/01_Archive" ] && [ -d "$dir/02_Life" ]; then
       echo "$dir"
@@ -18,6 +18,11 @@ find_world() {
 
 WORLD_ROOT=$(find_world) || { echo "No ALIVE world found."; exit 0; }
 
+# Resolve preferences (name + toggles)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/alive-resolve-preferences.sh"
+PREFS=$(resolve_preferences "$WORLD_ROOT")
+
 # Find the most recent unsigned squirrel entry in .alive/_squirrels/
 SQUIRRELS_DIR="$WORLD_ROOT/.alive/_squirrels"
 LATEST_ENTRY=""
@@ -27,7 +32,7 @@ fi
 
 if [ -n "$LATEST_ENTRY" ]; then
   SESSION_ID=$(grep 'session_id:' "$LATEST_ENTRY" | awk '{print $2}')
-  WALNUT=$(grep 'alive:' "$LATEST_ENTRY" | awk '{print $2}')
+  WALNUT=$(grep '^walnut:' "$LATEST_ENTRY" | awk '{print $2}')
   STASH=$(grep -A 100 'stash:' "$LATEST_ENTRY" | head -50)
 
   # If a walnut is active, re-read its brief pack
@@ -56,6 +61,7 @@ if [ -n "$LATEST_ENTRY" ]; then
 
   cat << EOF
 CONTEXT RESTORED after compaction. Session: $SESSION_ID | Walnut: ${WALNUT:-none}
+$PREFS
 
 Stash recovered:
 $STASH
@@ -69,5 +75,8 @@ $KEY_CONTENT
 IMPORTANT: Re-read _core/key.md, _core/now.md, _core/tasks.md before continuing work. Do not trust memory of files read before compaction.
 EOF
 else
-  echo "Context compacted. No squirrel entry found — stash may be lost."
+  cat << EOF
+Context compacted. No squirrel entry found — stash may be lost.
+$PREFS
+EOF
 fi

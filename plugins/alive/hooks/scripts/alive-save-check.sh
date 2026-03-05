@@ -27,7 +27,7 @@ if [ "$STOP_ACTIVE" = "true" ]; then
 fi
 
 # Throttle: per-world, 20 minutes
-WARN_FILE="/tmp/walnut-save-check-$(echo "$WORLD_ROOT" | md5sum 2>/dev/null | cut -c1-8 || md5 -q -s "$WORLD_ROOT" | cut -c1-8)"
+WARN_FILE="/tmp/alive-save-check-$(echo "$WORLD_ROOT" | md5sum 2>/dev/null | cut -c1-8 || md5 -q -s "$WORLD_ROOT" | cut -c1-8)"
 if [ -f "$WARN_FILE" ]; then
   LAST_WARN=$(cat "$WARN_FILE")
   NOW=$(date +%s)

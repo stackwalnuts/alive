@@ -19,7 +19,7 @@ Before checking for problems, get the lay of the land. Scan `_core/_squirrels/` 
 ```
 ╭─ 🐿️ housekeeping — recent squirrel activity
 │
-│  alive-gtm       5 sessions this week (3 signed, 2 unsigned)
+│  orbit-lab       5 sessions this week (3 signed, 2 unsigned)
 │  nova-station    1 session (signed)
 │  glass-cathedral 0 sessions in 12 days
 │

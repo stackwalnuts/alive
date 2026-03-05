@@ -30,7 +30,7 @@ tags: []
 
 ## People Mentioned
 <!-- Anyone referenced who isn't a participant. Note context —
-     "Kai mentioned as potential shielding vendor contact." -->
+     "Jax mentioned as potential shielding vendor contact." -->
 
 ## Open Questions
 <!-- Things raised but not resolved. Questions that need follow-up. -->

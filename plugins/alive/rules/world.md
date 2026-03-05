@@ -6,7 +6,7 @@ description: How worlds are built. Walnut anatomy, ALIVE domains, _core/ structu
 
 # World
 
-A World is an ALIVE folder system on you's machine. Every file has frontmatter. Every folder has purpose. Nothing gets deleted. Everything progresses.
+A World is an ALIVE folder system on the human's machine. Every file has frontmatter. Every folder has purpose. Nothing gets deleted. Everything progresses.
 
 ---
 
@@ -47,7 +47,7 @@ nova-station/
     _squirrels/                   session entries
     _working/                     drafts and versions
     _references/                  source material + companions
-  engineering/                    ← live context (you's work)
+  engineering/                    ← live context (the human's work)
   regulatory/
   marketing/
   partners/
@@ -55,7 +55,7 @@ nova-station/
 
 **Everything inside `_core/` is system.** The squirrel's system operations happen here.
 
-**Everything outside `_core/` is live context.** You's actual work — documents, assets, code, creative output. Includes things promoted from `_core/_working/`, things created directly, and things shared with others.
+**Everything outside `_core/` is live context.** The human's actual work — documents, assets, code, creative output. Includes things promoted from `_core/_working/`, things created directly, and things shared with others.
 
 ### The Five System Files
 
@@ -77,11 +77,11 @@ created: 2026-01-15
 rhythm: weekly
 parent: [[parent-walnut]]          # if nested
 people:
-  - name: Ada Chen
+  - name: Ryn Okata
     role: engineering lead
-    email: ada@novastation.space
+    email: ryn@novastation.space
 tags: [orbital, tourism, engineering]
-links: [[ada-chen]], [[glass-cathedral]]
+links: [[ryn-okata]], [[glass-cathedral]]
 published:
   - slug: orbital-safety-brief
     url: https://you.walnut.world/orbital-safety-brief
@@ -121,7 +121,7 @@ At 50 entries or phase close → chapter. Synthesis moves to `_core/_chapters/ch
 
 ### insights.md
 
-Standing domain knowledge. Updated only when you confirm an insight as evergreen:
+Standing domain knowledge. Updated only when the human confirms an insight as evergreen:
 
 ```
 ╭─ 🐿️ insight candidate
@@ -203,12 +203,29 @@ Archive is graduation. The walnut served its purpose. Still indexed, still searc
 
 ## Health Signals
 
-For endeavors (ventures, experiments, campaigns). Based on `rhythm:` in key.md.
+For endeavors (ventures, experiments, campaigns). Calculated from `rhythm:` in key.md and `updated:` in now.md.
 
-| Signal | Meaning |
-|--------|---------|
-| active | Within rhythm |
-| quiet | 1-2x past rhythm |
-| waiting | 2x+ past rhythm |
+### Calculation
 
-People don't get health signals — just `last updated` with nudges.
+```
+days_since = today - now.md updated date
+rhythm_days = { daily: 1, weekly: 7, biweekly: 14, monthly: 30 }
+
+if days_since <= rhythm_days:        health = "active"
+if days_since <= rhythm_days * 2:    health = "quiet"
+if days_since > rhythm_days * 2:     health = "waiting"
+```
+
+| Signal | Meaning | Dashboard |
+|--------|---------|-----------|
+| active | Within rhythm | No flag |
+| quiet | 1-2x past rhythm | Shown in tree |
+| waiting | 2x+ past rhythm | ⚠ warning + days count |
+
+### People
+
+People don't get health signals — just `last updated` with nudges. If someone close hasn't had a context update in 2+ weeks, surface: "Worth reaching out to [name]?"
+
+### Preference Toggle
+
+`health_nudges: false` in `.alive/preferences.yaml` disables proactive nudging. Health is still calculated and shown on the dashboard — you just won't volunteer it unprompted.

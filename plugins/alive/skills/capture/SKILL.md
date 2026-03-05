@@ -21,7 +21,7 @@ If capture is hard, people skip it. If people skip it, the system dies. Capture 
 - Content pasted from another app
 - API context pulled (Gmail, Slack, Calendar)
 - Research completed during a session
-- Conductor says "capture this" or "add this"
+- The human says "capture this" or "add this"
 - Squirrel detects external content and offers to capture
 
 **Capture is one of two operations that writes mid-session** (the other is _working/ drafts). Everything else waits for save.
@@ -97,8 +97,8 @@ Extracted items become stash items tagged with destination walnuts. They route a
 The squirrel offers deep capture for content that's clearly rich:
 
 ```
-╭─ 🐿️ captured — transcript from Kai (45 min)
-│  Stored: _core/_references/transcripts/2026-02-23-kai-shielding-review.md
+╭─ 🐿️ captured — transcript from Jax (45 min)
+│  Stored: _core/_references/transcripts/2026-02-23-jax-shielding-review.md
 │  Companion written with frontmatter + summary
 │
 │  This looks rich. Deep extract for decisions + tasks?
@@ -113,7 +113,7 @@ The squirrel offers deep capture for content that's clearly rich:
 # Email
 ---
 type: email
-from: kai@novastation.space
+from: jax@novastation.space
 to: you@example.com
 subject: Shielding vendor shortlist
 date: 2026-02-23
@@ -123,7 +123,7 @@ squirrel: 2a8c95e9
 # Transcript
 ---
 type: transcript
-participants: [You, Kai Tanaka, Dr. Elara Voss]
+participants: [You, Jax Stellara, Dr. Elara Voss]
 duration: 45m
 platform: Fathom
 date: 2026-02-23
@@ -204,7 +204,7 @@ Three shielding approaches evaluated for the Nova Station habitat module:
 aluminium (proven, heavy, cheap), ceramic composite (lighter, 3x cost),
 and hybrid (aluminium primary + ceramic secondary for crew quarters).
 Hybrid recommended — meets NASA exposure limits at acceptable weight
-penalty. Decision pending vendor pricing from Kai's shortlist.
+penalty. Decision pending vendor pricing from Jax's shortlist.
 
 ## Key Findings
 
@@ -216,7 +216,7 @@ penalty. Decision pending vendor pricing from Kai's shortlist.
 
 ## Open Questions
 
-- Does Kai's vendor shortlist include ceramic composite suppliers?
+- Does Jax's vendor shortlist include ceramic composite suppliers?
 - What's the weight budget from SpaceVentures? (impacts which approach is viable)
 - Has Dr. Voss reviewed the hybrid approach?
 
@@ -231,7 +231,7 @@ penalty. Decision pending vendor pricing from Kai's shortlist.
 
 If weight budget allows hybrid approach, it's the clear winner — 33% cheaper
 than full ceramic, 33% lighter than full aluminium, meets all regulatory
-requirements. The vendor pricing from Kai is the decision gate.
+requirements. The vendor pricing from Jax is the decision gate.
 ```
 
 **2. Stash insights** — any standing truths discovered during research get stashed as insight candidates:

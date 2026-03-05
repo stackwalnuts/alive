@@ -26,7 +26,7 @@ claude plugin install alivecomputer/alive
 ## What You Get
 
 - **9 skills:** world, open, save, capture, find, create, housekeeping, config, recall
-- **6 rules:** behaviours, conventions, voice, squirrels, world, you
+- **6 rules:** behaviours, conventions, voice, squirrels, world, human
 - **11 hooks:** session lifecycle, log protection, rule guarding, archive enforcement, stash preservation
 - **Templates:** walnut scaffold, 7 companion types, squirrel entry, world setup
 

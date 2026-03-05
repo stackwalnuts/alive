@@ -61,7 +61,7 @@ One observation you might not have seen. A connection, a question, a nudge.
 
 ```
 ╭─ 🐿️ spark
-│  Ada hasn't been mentioned in 8 days but there are 2 telemetry
+│  Ryn hasn't been mentioned in 8 days but there are 2 telemetry
 │  reports from her team sitting in email. Might be test results.
 ╰─
 ```
@@ -91,11 +91,11 @@ If there's not enough context for a genuine spark, skip it. An obvious one is wo
 
 ## Cross-Loading
 
-If another walnut becomes relevant during work ("this references [[ada-chen]]"), ask before loading it. One walnut, one focus.
+If another walnut becomes relevant during work ("this references [[ryn-okata]]"), ask before loading it. One walnut, one focus.
 
 ```
 ╭─ 🐿️ cross-reference
-│  This mentions [[ada-chen]]. Load her context?
+│  This mentions [[ryn-okata]]. Load her context?
 ╰─
 ```
 

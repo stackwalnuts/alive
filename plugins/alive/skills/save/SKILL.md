@@ -40,7 +40,7 @@ Present the full stash visually in a single bordered block for readability, then
 │
 │  decisions (3)
 │   1. Orbital test window confirmed for March 4  → nova-station
-│   2. Ada's team handles all telemetry review  → nova-station
+│   2. Ryn's team handles all telemetry review  → nova-station
 │   3. Festival submission over gallery showing  → glass-cathedral
 │
 │  tasks (2)
@@ -48,7 +48,7 @@ Present the full stash visually in a single bordered block for readability, then
 │   5. Submit festival application by Mar 1  → glass-cathedral
 │
 │  notes (1)
-│   6. Kai mentioned new radiation shielding vendor  → [[kai-tanaka]]
+│   6. Jax mentioned new radiation shielding vendor  → [[jax-stellara]]
 │
 │  next: was "Review telemetry from test window"
 ╰─
@@ -131,9 +131,9 @@ stash:
   - content: "Book ground control sim for Feb 28"
     type: task
     routed: nova-station
-  - content: "Kai mentioned new radiation shielding vendor"
+  - content: "Jax mentioned new radiation shielding vendor"
     type: note
-    routed: kai-tanaka
+    routed: jax-stellara
 ```
 
 - `working:` — list any `_working/` files created or modified this session
@@ -172,7 +172,7 @@ Session continues. Stash resets for next checkpoint.
 ╭─ 🐿️ saved — checkpoint 2
 │  3 decisions routed to log
 │  2 tasks added
-│  1 dispatch to [[kai-tanaka]]
+│  1 dispatch to [[jax-stellara]]
 │  next: updated
 │  zero-context: ✓
 │

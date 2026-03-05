@@ -39,8 +39,8 @@ links: []
      Each should have their own walnut in 02_Life/people/.
 
      Example:
-     - **Ada Chen** — engineering lead. [[ada-chen]]
-     - **Ben Torres** — co-founder, handles partnerships. [[ben-torres]]
+     - **Ryn Okata** — engineering lead. [[ryn-okata]]
+     - **Mira Solaris** — co-founder, handles partnerships. [[mira-solaris]]
 -->
 
 ## Connections

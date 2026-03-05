@@ -42,7 +42,7 @@ case "$FILE_PATH" in
   "$WORLD_ROOT/.alive/rules/"*)
     BASENAME=$(basename "$FILE_PATH")
     case "$BASENAME" in
-      voice.md|behaviours.md|conventions.md|squirrels.md|you.md|world.md)
+      voice.md|behaviours.md|conventions.md|squirrels.md|human.md|world.md)
         echo "$DENY_MSG"
         exit 0
         ;;
@@ -67,7 +67,7 @@ case "$FILE_PATH" in
   "$WORLD_ROOT/.claude/rules/"*)
     BASENAME=$(basename "$FILE_PATH")
     case "$BASENAME" in
-      voice.md|behaviours.md|conventions.md|squirrels.md|you.md|world.md)
+      voice.md|behaviours.md|conventions.md|squirrels.md|human.md|world.md)
         echo "$DENY_MSG"
         exit 0
         ;;

@@ -25,9 +25,9 @@ squirrel: {{session_id}}
 
      Example:
      Orbital test window confirmed for March 4 (decided 3 sessions ago).
-     Ada's team completed telemetry review yesterday — all systems nominal.
+     Ryn's team completed telemetry review yesterday — all systems nominal.
      Ground control sim booked for Feb 28. Shielding vendor decision made
-     this session: going with hybrid approach based on Kai's shortlist.
+     this session: going with hybrid approach based on Jax's shortlist.
      Meridian partnership paused until after test window. Next milestone
      is the crewed test itself.
 -->

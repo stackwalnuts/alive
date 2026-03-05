@@ -1,7 +1,7 @@
 #!/bin/bash
 # Shared preference resolver — sourced by session hooks.
 # Parses preferences.yaml into resolved ON/OFF directives for toggle keys.
-# Non-toggle sections (voice, context_sources) are left for LLM interpretation.
+# Also extracts person's name from .alive/key.md and context source summaries.
 # Usage: source this file, then call resolve_preferences "$WORLD_ROOT"
 
 resolve_preferences() {
@@ -16,6 +16,7 @@ resolve_preferences() {
   # Defaults — all ON
   local spark="ON" show_reads="ON" health_nudges="ON"
   local stash_checkpoint="ON" always_watching="ON" save_prompt="ON"
+  local theme="vibrant"
 
   if [ -f "$prefs_file" ]; then
     while IFS= read -r line; do
@@ -35,17 +36,36 @@ resolve_preferences() {
         stash_checkpoint)  [[ "$value" == "false" || "$value" == "off" ]] && stash_checkpoint="OFF" ;;
         always_watching)   [[ "$value" == "false" || "$value" == "off" ]] && always_watching="OFF" ;;
         save_prompt)       [[ "$value" == "false" || "$value" == "off" ]] && save_prompt="OFF" ;;
+        theme)             theme=$(echo "$line" | cut -d: -f2- | tr -d ' ') ;;
       esac
     done < "$prefs_file"
   fi
 
+  # Read person's name from .alive/key.md
+  local name="unknown"
+  local key_file="$world_root/.alive/key.md"
+  if [ -f "$key_file" ]; then
+    local extracted
+    extracted=$(grep '^name:' "$key_file" | head -1 | cut -d: -f2- | sed 's/^ *//')
+    [ -n "$extracted" ] && name="$extracted"
+  fi
+
   cat << PREFS
-Active Preferences:
-  spark: $spark — show The Spark observation at walnut open
-  show_reads: $show_reads — show ▸ read indicators when loading files
-  health_nudges: $health_nudges — surface stale walnut warnings proactively
-  stash_checkpoint: $stash_checkpoint — shadow-write stash to squirrel YAML periodically
-  always_watching: $always_watching — background instincts for people, working fits, capturable content
-  save_prompt: $save_prompt — ask before saving
+Name: $name
+Preferences:
+  spark: $spark
+  show_reads: $show_reads
+  health_nudges: $health_nudges
+  stash_checkpoint: $stash_checkpoint
+  always_watching: $always_watching
+  save_prompt: $save_prompt
+  theme: $theme
 PREFS
+
+  # Output context sources summary if configured
+  if [ -f "$prefs_file" ] && grep -q "context_sources:" "$prefs_file" 2>/dev/null; then
+    echo "Context Sources: configured (read .alive/preferences.yaml for details)"
+  else
+    echo "Context Sources: none configured"
+  fi
 }

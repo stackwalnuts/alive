@@ -6,7 +6,7 @@ user-invocable: true
 
 # Create
 
-Scaffold a new walnut — any type, any ALIVE domain. Understand it first, map where its context lives, then scaffold. Optionally bring in existing content (Step 7 — only if you has files to migrate).
+Scaffold a new walnut — any type, any ALIVE domain. Understand it first, map where its context lives, then scaffold. Optionally bring in existing content (Step 7 — only if you have files to migrate).
 
 Not a setup wizard (that's `world/setup.md` — first-time only). Not opening an existing walnut (that's `alive:open`).
 
@@ -139,7 +139,7 @@ This becomes a `## Context Map` section in key.md:
 
 | Source | Details | Status |
 |--------|---------|--------|
-| Gmail | Thread with kai@example.com re: shielding specs | Not captured |
+| Gmail | Thread with jax@example.com re: shielding specs | Not captured |
 | Slack | #nova-engineering channel | Ongoing |
 | Google Drive | "Nova Station" shared folder | Not captured |
 | Fathom | 3 recorded calls with engineering team | Not captured |
@@ -156,13 +156,13 @@ Present everything gathered so far:
 ```
 ╭─ 🐿️ new walnut
 │
-│  Name:    peptide-calculator
+│  Name:    flux-engine
 │  Type:    experiment
-│  Goal:    Build a peptide dosage calculator for personal use
-│  Path:    05_Experiments/peptide-calculator/
+│  Goal:    Build a propulsion flux simulator for orbital testing
+│  Path:    05_Experiments/flux-engine/
 │  Parent:  none
 │  Rhythm:  weekly (default)
-│  People:  2 (Kai Tanaka, Dr. Elara Voss)
+│  People:  2 (Jax Stellara, Dr. Elara Voss)
 │  Context: 4 sources mapped (Gmail, Slack, Drive, Fathom)
 │
 │  → create / change name / change type / change rhythm / cancel
@@ -188,7 +188,7 @@ Follow the 9-step process from `conventions.md § Creating a New Walnut` exactly
 ```
 ╭─ 🐿️ scaffolding...
 │
-│  ▸ 05_Experiments/peptide-calculator/
+│  ▸ 05_Experiments/flux-engine/
 │  ▸   _core/key.md — type: experiment, goal set, 2 people, 4 context sources
 │  ▸   _core/now.md — phase: starting, health: active
 │  ▸   _core/log.md — first entry signed

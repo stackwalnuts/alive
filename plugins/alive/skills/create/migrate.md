@@ -154,15 +154,15 @@ digraph migration {
     "Detection → migration mode" [shape=doublecircle];
     "Phase 1: Scan" [shape=box];
     "Phase 2: Plan" [shape=box];
-    "Conductor approves?" [shape=diamond];
+    "Human approves?" [shape=diamond];
     "Phase 3: Execute" [shape=box];
     "Phase 4: Handoff" [shape=box];
 
     "Detection → migration mode" -> "Phase 1: Scan";
     "Phase 1: Scan" -> "Phase 2: Plan";
-    "Phase 2: Plan" -> "Conductor approves?";
-    "Conductor approves?" -> "Phase 2: Plan" [label="change something"];
-    "Conductor approves?" -> "Phase 3: Execute" [label="go"];
+    "Phase 2: Plan" -> "Human approves?";
+    "Human approves?" -> "Phase 2: Plan" [label="change something"];
+    "Human approves?" -> "Phase 3: Execute" [label="go"];
     "Phase 3: Execute" -> "Phase 4: Handoff";
 }
 ```

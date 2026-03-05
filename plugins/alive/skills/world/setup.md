@@ -6,7 +6,7 @@ internal: true
 
 # Setup
 
-First time. No ALIVE folders exist. You just installed walnut. Make it feel like something just came alive.
+First time. No ALIVE folders exist. You just installed ALIVE. Make it feel like something just came alive.
 
 ---
 
@@ -24,8 +24,7 @@ First time. No ALIVE folders exist. You just installed walnut. Make it feel like
 │  No world found. Let's build one.
 │
 │  This takes about 3 minutes. I'll create the folder structure,
-│  set up your first walnut, and get you a walnut.world link
-│  if you want one.
+│  set up your first walnut, and configure your context sources.
 │
 │  Ready?
 ╰─
@@ -33,8 +32,8 @@ First time. No ALIVE folders exist. You just installed walnut. Make it feel like
 
 ### 2. Identity
 
-→ AskUserQuestion: "What should I call you?"
-- Just your first name. Used in greetings, not stored publicly.
+→ AskUserQuestion: "What's your name?"
+- First name. Stored in `.alive/key.md`. The squirrel uses it everywhere.
 
 → AskUserQuestion: "Where should your world live?"
 - Default: current directory
@@ -52,9 +51,12 @@ First time. No ALIVE folders exist. You just installed walnut. Make it feel like
 │  ▸ 03_Inputs/
 │  ▸ 04_Ventures/
 │  ▸ 05_Experiments/
-│  ▸ .claude/rules/ (6 rules installed)
-│  ▸ .claude/settings.json (10 hooks installed)
-│  ▸ preferences.yaml (defaults)
+│  ▸ .alive/key.md (your identity)
+│  ▸ .alive/preferences.yaml (defaults)
+│  ▸ .alive/overrides.md (your customizations)
+│  ▸ .alive/rules/ → .claude/rules/ (6 rules symlinked)
+│  ▸ .alive/agents.md → .claude/CLAUDE.md (symlinked)
+│  ▸ .alive/_squirrels/ (session history)
 │
 │  Done. Five domains. Your world is alive.
 ╰─
@@ -68,18 +70,18 @@ First time. No ALIVE folders exist. You just installed walnut. Make it feel like
 
 For each selected source, ask for the path or confirm it's an MCP integration.
 
-Add context sources to `.alive/preferences.yaml` under the `context_sources:` key. Each source gets `indexed: false` — the system knows they're there but hasn't processed them yet.
+Add context sources to `.alive/preferences.yaml` under the `context_sources:` key. Each source gets `status: available` — the system knows they're there but hasn't processed them yet.
 
 ```
 ╭─ 🐿️ context sources registered
 │
-│  ▸ ChatGPT — ~/exports/chatgpt/ (indexed: false)
+│  ▸ ChatGPT — ~/exports/chatgpt/ (available — not yet indexed)
 │  ▸ Gmail — MCP live (active)
-│  ▸ Fathom — ~/exports/fathom/ (indexed: false)
+│  ▸ Fathom — ~/exports/fathom/ (available — not yet indexed)
 │
 │  These won't be loaded by default. The system knows they exist
 │  and can search them when relevant context might be there.
-│  Run alive:recall to browse them anytime.
+│  Run /alive:recall to browse them anytime.
 ╰─
 ```
 
@@ -91,17 +93,17 @@ Add context sources to `.alive/preferences.yaml` under the `context_sources:` ke
 → AskUserQuestion: "Is that a venture (revenue), experiment (testing), or life goal?"
 - Routes to the right ALIVE domain.
 
-Create the walnut with `_core/` structure. Pre-fill key.md from their answer.
+Create the walnut with `_core/` structure. Pre-fill `_core/key.md` from their answer.
 
 ```
 ╭─ 🐿️ first walnut created
 │
 │  ▸ 04_Ventures/nova-station/
 │  ▸   _core/key.md — "Build the first civilian orbital platform"
-│  ▸   _core/now.md — Phase: starting
-│  ▸   _core/log.md — First entry signed
-│  ▸   _core/insights.md — Empty, ready
-│  ▸   _core/tasks.md — Empty, ready
+│  ▸   _core/now.md — phase: starting
+│  ▸   _core/log.md — first entry signed
+│  ▸   _core/insights.md — empty, ready
+│  ▸   _core/tasks.md — empty, ready
 │  ▸   _core/_squirrels/
 │  ▸   _core/_working/
 │  ▸   _core/_references/
@@ -110,37 +112,16 @@ Create the walnut with `_core/` structure. Pre-fill key.md from their answer.
 ╰─
 ```
 
-### 6. walnut.world (Optional)
-
-→ AskUserQuestion: "Want a walnut.world link? It's free — a private space to preview and share your work."
-- "Yes" → claim flow
-- "Not now" → skip, can do later via alive:config
-
-If yes:
-→ AskUserQuestion: "Pick a name (e.g., your-name.walnut.world)"
-→ AskUserQuestion: "Set a keyphrase (like a password — you'll need this to publish)"
-
-Call `/api/name/reserve`. Store `WALNUT_NAME` and `WALNUT_KEYPHRASE` in `.env.local`.
-
-```
-╭─ 🐿️ your link is live
-│
-│  nova-station.walnut.world — claimed and ready.
-│  Publish anything with alive:publish.
-╰─
-```
-
-### 7. Done
+### 6. Done
 
 ```
 ╭─ 🐿️ your world is alive
 │
 │  World: /path/to/your/world
-│  First alive: nova-station (04_Ventures/)
-│  Link: nova-station.walnut.world
+│  First walnut: nova-station (04_Ventures/)
 │
 │  9 skills ready:
-│    world · open · save · capture · find · housekeeping · config · publish · recall
+│    world · open · save · capture · find · create · housekeeping · config · recall
 │
 │  Say "open nova-station" to start working.
 │  Say "world" anytime to see everything.
@@ -162,15 +143,17 @@ Call `/api/name/reserve`. Store `WALNUT_NAME` and `WALNUT_KEYPHRASE` in `.env.lo
 | `03_Inputs/` | Buffer — route out within 48h |
 | `04_Ventures/` | Revenue intent |
 | `05_Experiments/` | Testing grounds |
-| `.claude/rules/` | 6 rules files from plugin |
-| `.claude/settings.json` | 10 hooks from plugin |
-| `preferences.yaml` | Defaults |
-| `.env.local` | WALNUT_NAME + WALNUT_KEYPHRASE (if claimed) |
+| `.alive/key.md` | World identity (name, goal, timezone) |
+| `.alive/preferences.yaml` | Toggles and context sources |
+| `.alive/overrides.md` | Your rule customizations (never overwritten) |
+| `.alive/_squirrels/` | Centralized session entries |
+| `.alive/rules/*.md` | 6 rules (originals, symlinked to `.claude/rules/`) |
+| `.alive/agents.md` | Runtime contract (symlinked to `.claude/CLAUDE.md`) |
 | `[first-walnut]/_core/` | Full walnut structure |
 
 ## What Setup Does NOT Do
 
-- Import existing context (that's calibrate.md — progressive, over 30 days)
-- Set up API integrations (that's alive:config)
-- Configure voice (defaults are fine, customize later)
+- Import existing context (use `/alive:recall` to progressively search and index)
+- Set up API integrations (use `/alive:config`)
+- Configure voice (defaults are fine, customize later via `/alive:config`)
 - Create multiple walnuts (one is enough to start)

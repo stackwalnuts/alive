@@ -60,8 +60,8 @@ festival-submission-v0.3.md
 Pattern: `YYYY-MM-DD-descriptive-name.ext`
 
 ```
-2026-02-23-kai-shielding-review.md        ← companion
-2026-02-23-kai-shielding-review.mp3        ← raw (in raw/ subfolder)
+2026-02-23-jax-shielding-review.md        ← companion
+2026-02-23-jax-shielding-review.mp3        ← raw (in raw/ subfolder)
 2026-02-20-vendor-proposal.pdf
 ```
 
@@ -81,9 +81,9 @@ Same name as the raw file, `.md` extension. Lives alongside the raw file's paren
 
 ```
 _references/transcripts/
-  2026-02-23-kai-shielding-review.md      ← companion
+  2026-02-23-jax-shielding-review.md      ← companion
   raw/
-    2026-02-23-kai-shielding-review.mp3   ← raw
+    2026-02-23-jax-shielding-review.mp3   ← raw
 ```
 
 ---
@@ -171,8 +171,8 @@ Every companion has:
 ```yaml
 ---
 type: transcript
-description: Kai shielding vendor review — shortlisted 3 options, decision pending
-participants: [You, Kai Tanaka]
+description: Jax shielding vendor review — shortlisted 3 options, decision pending
+participants: [[name], Jax Stellara]
 duration: 45m
 platform: Fathom
 date: 2026-02-23
@@ -233,13 +233,13 @@ _core/_references/
 **Where to use them:**
 - `key.md` frontmatter `links:` field — the canonical list of connections
 - `key.md` body — in the Connections and Key People sections
-- `log.md` entries — inline when referencing other walnuts ("discussed with [[ada-chen]]")
+- `log.md` entries — inline when referencing other walnuts ("discussed with [[ryn-okata]]")
 - `insights.md` — when an insight relates to another walnut
 
 **Rules:**
 - If you add a `[[link]]` inline, also add it to key.md `links:` frontmatter
 - `alive:find` searches for these across all walnuts
-- Person walnuts use `[[first-last]]` format (e.g., `[[ada-chen]]`)
+- Person walnuts use `[[first-last]]` format (e.g., `[[ryn-okata]]`)
 - Walnut names use kebab-case (e.g., `[[nova-station]]`, `[[glass-cathedral]]`)
 
 ---
@@ -285,7 +285,7 @@ External plugins (superpowers, etc.) assume standard code project layouts — `d
 
 **No orphan files at World root.** The only things at root level are the 5 ALIVE domain folders, `.claude/`, and dotfiles. Everything else belongs inside a walnut.
 
-If no walnut is active and a skill wants to write a file, ask you where it should go before writing.
+If no walnut is active and a skill wants to write a file, ask the human where it should go before writing.
 
 ---
 

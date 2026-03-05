@@ -43,19 +43,52 @@ If unclear, the squirrel asks once:
 
 ## Preferences
 
-`preferences.yaml` at `.claude/` or world root. Read by session-start hook.
+`.alive/preferences.yaml` — read by session-start hook via `alive-resolve-preferences.sh`.
+
+### Toggle Keys (default: all ON)
 
 ```yaml
-# preferences.yaml
-spark: true                    # observation at open
-show_reads: true               # show ▸ reads when loading files
-health_nudges: true            # surface stale walnuts proactively
-stash_checkpoint: true         # shadow-write stash every 5 items / 20 min
-always_watching: true          # people, working fits, capturable content
-save_prompt: true              # "anything else?" before save
+# Squirrel behaviour
+spark: true                    # The Spark observation at walnut open
+show_reads: true               # Show ▸ indicators when loading files
+stash_checkpoint: true         # Shadow-write stash to squirrel YAML every 5 items / 20 min
+always_watching: true          # Background instincts: people, working fits, capturable content
+save_prompt: true              # Ask "anything else?" before save
+
+# World behaviour
+health_nudges: true            # Surface stale walnut warnings proactively
+
+# Display
+theme: vibrant                 # vibrant | minimal | clean (companion app)
 ```
 
-Toggle any value. Takes effect next session (or after `/compact`).
+Set any key to `false` to disable. Takes effect next session (or after `/compact`).
+
+### Context Sources
+
+External context the system knows about. Used by `alive:world` (dashboard), `alive:recall` (search), `alive:find` (query), and `alive:capture` (import).
+
+```yaml
+context_sources:
+  gmail:
+    type: mcp_live             # live API via MCP server
+    status: active
+    walnuts: all
+  slack:
+    type: sync_script          # pulled by script
+    script: .claude/scripts/slack-sync.mjs
+    status: active
+    walnuts: all
+  chatgpt:
+    type: static_export        # one-time export file
+    path: ~/exports/chatgpt/conversations.json
+    status: indexed
+    walnuts: all
+```
+
+Source types: `mcp_live`, `sync_script`, `static_export`, `markdown_vault`.
+Status: `active` (live), `indexed` (imported), `available` (registered, not imported).
+Scoping: `walnuts: all` or `walnuts: [nova, gtm]` for specific walnuts only.
 
 ---
 

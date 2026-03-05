@@ -46,17 +46,17 @@ What needs you TODAY. Not everything — just what's active and demanding.
 │  RIGHT NOW
 │  ──────────────────────────────────────────────
 │
-│   1. alive-gtm              building
-│      Next: Test plugin install end-to-end
+│   1. nova-station            testing
+│      Next: Review telemetry from test window
 │      Last: 2 hours ago · 6 sessions this week
 │
-│   2. sovereign-systems       launching
-│      Next: Set up Cloudflare API for DNS
+│   2. stellarforge            launching
+│      Next: Deploy relay satellites
 │      Last: 2 days ago
-│      People: Will Adler, Attila Mora
+│      People: Orion Vex, Luna Thresh
 │
-│   3. supernormal-systems     legacy
-│      Next: Send 9 client email drafts
+│   3. voidlight               legacy
+│      Next: Finalise 9 legacy contract closures
 │      ⚠ 4 days past rhythm
 │
 ╰─
@@ -71,15 +71,15 @@ Only show walnuts that are `active` or past their rhythm. Sort by most recently 
 
 ### Section 2: Attention
 
-Things that need you's decision or action. Not walnuts — specific issues.
+Things that need your decision or action. Not walnuts — specific issues.
 
 ```
 ╭─ 🐿️ attention
 │
-│   → 3 unread emails from Will (Gmail, 2 days)
-│   → Unsigned session on alive-gtm (squirrel:a3f7, 6 stash items)
+│   → 3 unread emails from Orion (Gmail, 2 days)
+│   → Unsigned session on nova-station (squirrel:a3f7, 6 stash items)
 │   → 03_Inputs/ has 2 items older than 48 hours
-│   → peptide-calculator quiet for 12 days (rhythm: weekly)
+│   → flux-engine quiet for 12 days (rhythm: weekly)
 │   → 4 working files older than 30 days across 3 walnuts
 │
 ╰─
@@ -102,31 +102,31 @@ The full structure — grouped by ALIVE domain, with parent/child nesting visibl
 ╭─ 🐿️ your world
 │
 │  LIFE
-│   identity           active     XRP panel Feb 27
-│   health             quiet      ADHD diagnosis
+│   identity           active     Exoplanet panel Feb 27
+│   health             quiet      Sleep protocol review
 │   people/
-│     will-adler       updated 2 days ago
-│     attila-mora      updated 1 day ago
-│     clara            updated 5 days ago
+│     orion-vex        updated 2 days ago
+│     luna-thresh      updated 1 day ago
+│     zara             updated 5 days ago
 │
 │  VENTURES
-│   sovereign-systems  launching  Cloudflare API
+│   stellarforge       launching  Relay satellites
 │     └ walnut-plugin  building   Test install
-│   supernormal        legacy     Client emails
-│   hypha              quiet      Podcast landing
+│   voidlight          legacy     Legacy contracts
+│   nebula-drift       quiet      Podcast landing
 │
 │  EXPERIMENTS
-│   alive-gtm          building   Test plugin
+│   orbit-lab          building   Test plugin
 │   ghost-protocol     waiting    Decide: rewrite or revise
-│   peptide-calculator quiet      ⚠ 12 days
-│   zeitgeist          quiet      Simplify countdown
+│   flux-engine        quiet      ⚠ 12 days
+│   pulsar-sync        quiet      Simplify countdown
 │   ... +6 more (3 waiting, 3 quiet)
 │
 │  INPUTS
 │   2 items (oldest: 4 days)
 │
 │  ARCHIVE
-│   1 walnut (fangrid)
+│   1 walnut (starweave)
 │
 ╰─
 ```
@@ -141,8 +141,8 @@ Key features:
 - **5-day activity indicator** — `●` dot for each of the last 5 days the walnut was touched. Visual pulse at a glance.
 
 ```
-│   alive-gtm          ●●●●● building   Test plugin
-│   sovereign-systems  ●●○○○ launching   Cloudflare API
+│   orbit-lab          ●●●●● building   Test plugin
+│   stellarforge       ●●○○○ launching   Relay satellites
 │   ghost-protocol     ○○○○○ waiting     Decide: rewrite or revise
 ```
 
@@ -155,11 +155,11 @@ What's been happening across the world. A pulse check.
 ```
 ╭─ 🐿️ recent activity
 │
-│   Today     alive-gtm         6 sessions · shipped v0.1-beta
-│   Yesterday alive-gtm         rebuilt architecture, 22 decisions
+│   Today     orbit-lab         6 sessions · shipped v0.1-beta
+│   Yesterday orbit-lab         rebuilt architecture, 22 decisions
 │   Feb 22    walnut-world      infrastructure, KV, DNS
-│   Feb 22    alive-gtm         companion app, web installer
-│   Feb 21    alive-gtm         plugin refactor, ecosystem plan
+│   Feb 22    orbit-lab         companion app, web installer
+│   Feb 21    orbit-lab         plugin refactor, ecosystem plan
 │
 │   5 sessions this week · 3 walnuts touched · 47 stash items routed
 │
@@ -191,18 +191,15 @@ What's been happening across the world. A pulse check.
 
 ---
 
-## API Context (preferences.yaml)
+## Context Sources (preferences.yaml)
 
-If you has configured context sources in `.alive/preferences.yaml`, surface relevant items:
+If `context_sources:` is configured in `.alive/preferences.yaml`, surface relevant items from active sources:
 
-- **Gmail (MCP live):** Unread count, recent senders, anything flagged
-- **Slack (sync script):** Unread mentions, DMs
-- **Calendar (MCP live):** Today's events, upcoming deadlines
-- **Other sources:** Only if they have new/relevant items
+- **mcp_live sources** (Gmail, Slack, Calendar, GitHub): Query on demand. Show actionable items only — "3 unread emails from Orion" not "847 emails."
+- **sync_script sources**: Check last sync time. If stale, note it.
+- **static_export / markdown_vault**: Don't query at dashboard — these are for `/alive:recall` and `/alive:find`.
 
-Only show API context that's actionable. "3 unread emails from Will" is useful. "You have 847 emails" is not.
-
-Filter API context by walnut scoping — only show sources relevant to active walnuts (from preferences.yaml `walnuts:` field).
+Filter by walnut scoping — only show sources where `walnuts: all` or the current active walnut is in the list.
 
 ---
 

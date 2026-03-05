@@ -6,7 +6,7 @@ set -euo pipefail
 
 # Find the ALIVE world root by walking up from PWD
 find_world() {
-  local dir="$PWD"
+  local dir="${CLAUDE_PROJECT_DIR:-$PWD}"
   while [ "$dir" != "/" ]; do
     if [ -d "$dir/01_Archive" ] && [ -d "$dir/02_Life" ]; then
       echo "$dir"
@@ -47,19 +47,10 @@ stash: []
 working: []
 EOF
 
-# Read preferences
-PREFS_FILE="$WORLD_ROOT/.alive/preferences.yaml"
-if [ -f "$PREFS_FILE" ]; then
-  PREFS=$(cat "$PREFS_FILE")
-else
-  # Fallback to .claude/ location (pre-migration)
-  PREFS_FILE="$WORLD_ROOT/.claude/preferences.yaml"
-  if [ -f "$PREFS_FILE" ]; then
-    PREFS=$(cat "$PREFS_FILE")
-  else
-    PREFS="defaults (no preferences.yaml found)"
-  fi
-fi
+# Resolve preferences (toggle keys → ON/OFF, non-toggle sections for LLM)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/alive-resolve-preferences.sh"
+PREFS=$(resolve_preferences "$WORLD_ROOT")
 
 # Check rule staleness (compare plugin version vs project rules)
 RULES_STATUS="ok"
@@ -69,7 +60,6 @@ RULES_STATUS="ok"
 cat << EOF
 ALIVE session initialized. Session ID: $SESSION_ID
 World: $WORLD_ROOT
-Walnut: none detected
-Preferences: $PREFS
+$PREFS
 Rules: $RULES_STATUS
 EOF

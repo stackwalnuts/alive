@@ -23,7 +23,7 @@ published: []
      alive:find traverses them across walnuts.
 
      Example:
-     - **Ada Chen** — engineering lead, handles all telemetry review. [[ada-chen]]
+     - **Ryn Okata** — engineering lead, handles all telemetry review. [[ryn-okata]]
      - **Dr. Elara Voss** — regulatory advisor, monthly check-ins. [[elara-voss]]
 -->
 
@@ -47,7 +47,7 @@ published: []
      frontmatter above. When you add a link here, add it to frontmatter too.
 
      Example:
-     - [[ada-chen]] — engineering lead, also advises on [[glass-cathedral]]
+     - [[ryn-okata]] — engineering lead, also advises on [[glass-cathedral]]
      - [[sovereign-systems]] — parent company
 -->
 
