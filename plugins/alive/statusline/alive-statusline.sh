@@ -71,9 +71,8 @@ if [ -n "$WORLD_ROOT" ]; then
   WALNUT_COUNT=$(find "$WORLD_ROOT" -path "*/_core/key.md" -not -path "*/01_Archive/*" 2>/dev/null | wc -l | tr -d ' ')
 fi
 
-# Check if this is the boot render (no activity file yet = first response hasn't happened)
-ACTIVITY_FILE="/tmp/alive-activity-${SESSION_ID}"
-if [ ! -f "$ACTIVITY_FILE" ]; then
+# Boot vs working: if cost is $0.00, session hasn't had a response yet
+if [ "$COST" = "\$0.00" ]; then
   # ── BOOT MESSAGE — rotates tip each render ──
   TIPS=(
     "${COPPER}your context compounds from here${RESET}"
@@ -92,9 +91,6 @@ fi
 
 # ── WORKING STATUSLINE ──
 
-# Read activity count
-EDITS=$(cat "$ACTIVITY_FILE" 2>/dev/null || echo "0")
-
 # Context percentage color + warning
 CTX_COLOR="$GREEN"
 CTX_WARN=""
@@ -110,4 +106,4 @@ if [ "$CTX_PCT" != "?" ]; then
   fi
 fi
 
-echo -e "${DIM}${MODEL}${RESET} ${DIM}|${RESET} ${COPPER}🐿️ ${SHORT_ID}${RESET} ${DIM}|${RESET} ${CTX_COLOR}ctx:${CTX_PCT}%${RESET}${CTX_WARN} ${DIM}|${RESET} ${CYAN}${COST}${RESET} ${DIM}|${RESET} ${DIM}${EDITS} edits${RESET}"
+echo -e "${DIM}${MODEL}${RESET} ${DIM}|${RESET} ${COPPER}🐿️ ${SHORT_ID}${RESET} ${DIM}|${RESET} ${CTX_COLOR}ctx:${CTX_PCT}%${RESET}${CTX_WARN} ${DIM}|${RESET} ${CYAN}${COST}${RESET}"
