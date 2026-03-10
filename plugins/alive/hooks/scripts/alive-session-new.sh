@@ -134,25 +134,78 @@ if [ -f "$STATUSLINE_SRC" ]; then
   fi
 fi
 
-# Now read rule contents for injection (slow part — after YAML is written)
+# Detect runtime preference (default: classic)
+RUNTIME="classic"
+PREFS_FILE="$WORLD_ROOT/.alive/preferences.yaml"
+if [ -f "$PREFS_FILE" ]; then
+  DETECTED_RUNTIME=$(python3 -c "
+import re, sys
+try:
+    with open('$PREFS_FILE') as f:
+        for line in f:
+            m = re.match(r'^runtime:\s*(\S+)', line)
+            if m:
+                print(m.group(1))
+                sys.exit(0)
+except: pass
+" 2>/dev/null)
+  if [ -n "$DETECTED_RUNTIME" ]; then
+    RUNTIME="$DETECTED_RUNTIME"
+  fi
+fi
+
+# Load rules based on runtime
 RUNTIME_RULES=""
 RULE_COUNT=0
 RULE_NAMES=""
 
-if [ -f "$PLUGIN_ROOT/CLAUDE.md" ]; then
-  RUNTIME_RULES=$(cat "$PLUGIN_ROOT/CLAUDE.md")
-fi
+if [ "$RUNTIME" = "ratatoskr" ]; then
+  # Ratatoskr: identity file + brief pack + dynamic goal index
+  RATATOSKR_DIR="$PLUGIN_ROOT/ratatoskr"
 
-for rule_file in "$PLUGIN_ROOT/rules/"*.md; do
-  if [ -f "$rule_file" ]; then
-    RULE_COUNT=$((RULE_COUNT + 1))
-    RULE_NAME=$(basename "$rule_file" .md)
-    RULE_NAMES="${RULE_NAMES}${RULE_NAMES:+, }${RULE_NAME}"
+  if [ -f "$RATATOSKR_DIR/CLAUDE.md" ]; then
+    RUNTIME_RULES=$(cat "$RATATOSKR_DIR/CLAUDE.md")
+    RULE_COUNT=1
+    RULE_NAMES="ratatoskr-identity"
+  fi
+
+  if [ -f "$RATATOSKR_DIR/brief-pack.md" ]; then
     RUNTIME_RULES="${RUNTIME_RULES}
 
-$(cat "$rule_file")"
+$(cat "$RATATOSKR_DIR/brief-pack.md")"
+    RULE_COUNT=$((RULE_COUNT + 1))
+    RULE_NAMES="${RULE_NAMES}, brief-pack"
   fi
-done
+
+  # Generate dynamic goal index
+  if [ -f "$RATATOSKR_DIR/goal-index-generator.sh" ]; then
+    GOAL_INDEX=$(bash "$RATATOSKR_DIR/goal-index-generator.sh" "$WORLD_ROOT" 2>/dev/null)
+    if [ -n "$GOAL_INDEX" ]; then
+      RUNTIME_RULES="${RUNTIME_RULES}
+
+${GOAL_INDEX}"
+      RULE_COUNT=$((RULE_COUNT + 1))
+      RULE_NAMES="${RULE_NAMES}, goal-index"
+    fi
+  fi
+
+else
+  # Classic: CLAUDE.md + all rule files
+  if [ -f "$PLUGIN_ROOT/CLAUDE.md" ]; then
+    RUNTIME_RULES=$(cat "$PLUGIN_ROOT/CLAUDE.md")
+  fi
+
+  for rule_file in "$PLUGIN_ROOT/rules/"*.md; do
+    if [ -f "$rule_file" ]; then
+      RULE_COUNT=$((RULE_COUNT + 1))
+      RULE_NAME=$(basename "$rule_file" .md)
+      RULE_NAMES="${RULE_NAMES}${RULE_NAMES:+, }${RULE_NAME}"
+      RUNTIME_RULES="${RUNTIME_RULES}
+
+$(cat "$rule_file")"
+    fi
+  done
+fi
 
 # Preamble
 PREAMBLE="<EXTREMELY_IMPORTANT>
@@ -164,7 +217,9 @@ SESSION_MSG="ALIVE session initialized. Session ID: $SESSION_ID
 World: $WORLD_ROOT
 Walnut: none detected
 Model: $HOOK_MODEL
+Name: unknown
 $PREFS
+Runtime: ${RUNTIME}
 Rules: ${RULE_COUNT} loaded (${RULE_NAMES})"
 
 # Escape and combine
