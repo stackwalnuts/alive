@@ -1,7 +1,6 @@
 ---
 version: 1.0.0-beta
-runtime: squirrel.core@1.0
-identity: ratatoskr
+runtime: ratatoskr@1.0
 ---
 
 # ALIVE
