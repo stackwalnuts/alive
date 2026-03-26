@@ -66,7 +66,7 @@ esac
 
 # Block: anything in the Walnut plugin cache
 case "$FILE_PATH" in
-  */.claude/plugins/cache/alivecomputer/walnut/*)
+  */.claude/plugins/cache/stackwalnuts/walnut/*)
     echo "$DENY_MSG"
     exit 0
     ;;

@@ -31,7 +31,7 @@ fi
 # For Edit: check if the old_string contains a signed entry
 OLD_STRING=$(echo "$HOOK_INPUT" | jq -r '.tool_input.old_string // empty')
 
-if echo "$OLD_STRING" | grep -q 'signed: squirrel:'; then
+if echo "$OLD_STRING" | grep -qE 'signed: (squirrel:|walnut-mcp:)'; then
   echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"log.md is immutable. That entry is signed — add a correction entry instead."}}'
   exit 0
 fi
