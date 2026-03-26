@@ -1,5 +1,12 @@
 #!/usr/bin/env node
 
+// Check for setup subcommand before starting MCP server
+if (process.argv.includes("setup")) {
+  const { runSetup } = await import("./setup.js");
+  await runSetup();
+  process.exit(0);
+}
+
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
