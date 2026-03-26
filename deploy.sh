@@ -1,19 +1,15 @@
 #!/bin/bash
-# Deploy alive plugin from local clone to cache
+# Deploy walnut plugin from local clone to cache + marketplace
 # Usage: ./deploy.sh [--dry-run]
 
 set -euo pipefail
 
-SOURCE="$(cd "$(dirname "$0")/plugins/alive" && pwd)"
-CACHE="$HOME/.claude/plugins/cache/alivecomputer/alive/1.0.1-beta"
+SOURCE="$(cd "$(dirname "$0")/plugins/walnut" && pwd)"
+CACHE="$HOME/.claude/plugins/cache/stackwalnuts/walnut/1.0.0"
+MARKETPLACE="$HOME/.claude/plugins/marketplaces/stackwalnuts/plugins/walnut"
 
 if [ ! -d "$SOURCE" ]; then
   echo "ERROR: Source not found at $SOURCE"
-  exit 1
-fi
-
-if [ ! -d "$CACHE" ]; then
-  echo "ERROR: Cache not found at $CACHE"
   exit 1
 fi
 
@@ -23,15 +19,36 @@ if [ "${1:-}" = "--dry-run" ]; then
   echo "=== DRY RUN ==="
 fi
 
-echo "Source: $SOURCE"
-echo "Cache:  $CACHE"
+echo "Source:      $SOURCE"
+echo "Cache:       $CACHE"
+echo "Marketplace: $MARKETPLACE"
 echo ""
 
-rsync -av --delete \
-  --exclude='.git' \
-  --exclude='.DS_Store' \
-  $DRY_RUN \
-  "$SOURCE/" "$CACHE/"
+# Deploy to cache (if it exists)
+if [ -d "$CACHE" ]; then
+  rsync -av --delete \
+    --exclude='.git' \
+    --exclude='.DS_Store' \
+    $DRY_RUN \
+    "$SOURCE/" "$CACHE/"
+  echo ""
+  echo "Cache deployed."
+else
+  echo "Cache dir not found at $CACHE — skipping."
+fi
+
+# Deploy to marketplace (if it exists)
+if [ -d "$MARKETPLACE" ]; then
+  rsync -av --delete \
+    --exclude='.git' \
+    --exclude='.DS_Store' \
+    $DRY_RUN \
+    "$SOURCE/" "$MARKETPLACE/"
+  echo ""
+  echo "Marketplace deployed."
+else
+  echo "Marketplace dir not found at $MARKETPLACE — skipping."
+fi
 
 echo ""
-echo "Deployed $(date '+%Y-%m-%d %H:%M:%S')"
+echo "Done $(date '+%Y-%m-%d %H:%M:%S')"
