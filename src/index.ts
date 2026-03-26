@@ -263,7 +263,7 @@ server.tool(
           content: [
             {
               type: "text" as const,
-              text: `Captured to ${walnut}/_capsules/${capsule}/raw/${filename}`,
+              text: `Captured to ${walnut}/_core/_capsules/${capsule}/raw/${filename}`,
             },
           ],
         };
@@ -340,7 +340,7 @@ server.tool(
 
       // Create directory structure
       const coreDir = join(walnutDir, "_core");
-      const capsulesDir = join(walnutDir, "_capsules");
+      const capsulesDir = join(coreDir, "_capsules");
       mkdirSync(coreDir, { recursive: true });
       mkdirSync(capsulesDir, { recursive: true });
 

@@ -117,7 +117,7 @@ export async function runSetup() {
     for (const d of domains) {
       mkdirSync(join(worldPath, d), { recursive: true });
     }
-    mkdirSync(join(worldPath, ".alive"), { recursive: true });
+    mkdirSync(join(worldPath, ".walnut"), { recursive: true });
     mkdirSync(join(worldPath, "02_Life", "people"), { recursive: true });
     configured.push("World scaffolded at ~/world/");
   } else {

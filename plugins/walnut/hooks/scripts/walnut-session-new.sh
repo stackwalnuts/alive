@@ -143,9 +143,9 @@ if [ -f "$WORLD_KEY_FILE" ]; then
   WORLD_KEY_CONTENT=$(cat "$WORLD_KEY_FILE")
 fi
 
-# Read world index (.alive/_index.yaml) for injection — walnut registry
+# Read world index (.walnut/_index.yaml) for injection — walnut registry
 WORLD_INDEX_CONTENT=""
-WORLD_INDEX_FILE="$WORLD_ROOT/.alive/_index.yaml"
+WORLD_INDEX_FILE="$WORLD_ROOT/.walnut/_index.yaml"
 if [ -f "$WORLD_INDEX_FILE" ]; then
   WORLD_INDEX_CONTENT="<WORLD_INDEX>
 $(cat "$WORLD_INDEX_FILE")
