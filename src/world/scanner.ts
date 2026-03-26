@@ -181,7 +181,7 @@ function walkForWalnuts(dir: string, results: FoundKeyMd[]): void {
     });
   }
 
-  // Recurse into subdirectories, but skip _core/, _capsules/, _squirrels/, .alive/
+  // Recurse into subdirectories, but skip _core/, _capsules/, _squirrels/, .walnut/
   for (const entry of entries) {
     if (entry.startsWith(".") || entry === "_core" || entry === "_capsules" || entry === "_squirrels") {
       continue;
