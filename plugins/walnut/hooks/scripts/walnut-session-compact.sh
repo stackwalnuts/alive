@@ -58,7 +58,13 @@ WALNUT=""
 STASH="(empty)"
 if [ -n "${ENTRY:-}" ] && [ -f "$ENTRY" ]; then
   WALNUT=$(grep '^walnut:' "$ENTRY" | head -1 | sed 's/walnut: *//' || true)
-  STASH=$(awk '/^stash:/{found=1; next} found && /^[a-z]/{found=0} found && /content:/{gsub(/.*content: *"?/,""); gsub(/"$/,""); print "- " $0}' "$ENTRY" 2>/dev/null || true)
+  # Only show stash if this entry was never saved (saves: 0) — saved stash items were already routed
+  SAVES=$(grep '^saves:' "$ENTRY" | head -1 | sed 's/saves: *//' | tr -d '[:space:]' || echo "0")
+  if [ "$SAVES" = "0" ]; then
+    STASH=$(awk '/^stash:/{found=1; next} found && /^[a-z]/{found=0} found && /content:/{gsub(/.*content: *"?/,""); gsub(/"$/,""); print "- " $0}' "$ENTRY" 2>/dev/null || true)
+  else
+    STASH=""
+  fi
   if [ -z "${STASH:-}" ]; then
     STASH="(empty)"
   fi

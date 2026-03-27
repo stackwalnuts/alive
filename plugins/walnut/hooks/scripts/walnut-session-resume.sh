@@ -45,6 +45,41 @@ PREAMBLE="<EXTREMELY_IMPORTANT>
 The following are your core operating rules for the Walnut system. They are MANDATORY — not suggestions, not defaults, not guidelines. You MUST follow them in every response, every tool call, every session.
 </EXTREMELY_IMPORTANT>"
 
+# Self-heal statusline — ensure settings.json has absolute path
+SETTINGS_DIR="$WORLD_ROOT/.claude"
+SETTINGS_FILE="$SETTINGS_DIR/settings.json"
+mkdir -p "$SETTINGS_DIR"
+if [ ! -f "$SETTINGS_FILE" ]; then
+  cat > "$SETTINGS_FILE" << SETTINGSEOF
+{
+  "statusLine": {
+    "type": "command",
+    "command": "$WORLD_ROOT/.walnut/statusline.sh"
+  }
+}
+SETTINGSEOF
+else
+  if command -v python3 &>/dev/null; then
+    WALNUT_SETTINGS_FILE="$SETTINGS_FILE" WALNUT_WORLD_ROOT="$WORLD_ROOT" python3 -c "
+import json, os, sys
+sf = os.environ['WALNUT_SETTINGS_FILE']
+wr = os.environ['WALNUT_WORLD_ROOT']
+expected = wr + '/.walnut/statusline.sh'
+try:
+    with open(sf) as f:
+        data = json.load(f)
+except (json.JSONDecodeError, ValueError):
+    sys.exit(0)
+current = data.get('statusLine', {}).get('command', '')
+if current != expected:
+    data['statusLine'] = {'type': 'command', 'command': expected}
+    with open(sf, 'w') as f:
+        json.dump(data, f, indent=2)
+        f.write('\n')
+" 2>/dev/null || true
+  fi
+fi
+
 # Find squirrel entry by session_id (exact match) or fall back to most recent unsigned
 SQUIRRELS_DIR="$WORLD_ROOT/.walnut/_squirrels"
 ENTRY=""
@@ -59,8 +94,13 @@ if [ -n "$ENTRY" ] && [ -f "$ENTRY" ]; then
   ENTRY_SESSION_ID=$(grep '^session_id:' "$ENTRY" | head -1 | sed 's/session_id: *//' || true)
   WALNUT=$(grep '^walnut:' "$ENTRY" | head -1 | sed 's/walnut: *//' || true)
 
-  # Extract stash content lines from YAML
-  STASH=$(awk '/^stash:/{found=1; next} found && /^[a-z]/{found=0} found && /content:/{gsub(/.*content: *"?/,""); gsub(/"$/,""); print "- " $0}' "$ENTRY" 2>/dev/null || true)
+  # Only show stash if this entry was never saved (saves: 0) — saved stash items were already routed
+  SAVES=$(grep '^saves:' "$ENTRY" | head -1 | sed 's/saves: *//' | tr -d '[:space:]' || echo "0")
+  if [ "$SAVES" = "0" ]; then
+    STASH=$(awk '/^stash:/{found=1; next} found && /^[a-z]/{found=0} found && /content:/{gsub(/.*content: *"?/,""); gsub(/"$/,""); print "- " $0}' "$ENTRY" 2>/dev/null || true)
+  else
+    STASH=""
+  fi
   if [ -z "${STASH:-}" ]; then
     STASH="(empty)"
   fi
