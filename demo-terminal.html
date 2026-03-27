@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Walnut Demo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: transparent;
+    display: flex;
+    justify-content: center;
+    padding: 0;
+    font-family: "SF Mono", "Menlo", "Consolas", monospace;
+  }
+
+  .tui {
+    width: 900px;
+    background: #fafafa;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+  }
+
+  /* ── Boot line ── */
+  .boot-line {
+    padding: 8px 20px;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: #9ca3af;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .boot-line .walnut-name {
+    color: #F97316;
+    font-weight: 600;
+  }
+
+  /* ── User prompt bar ── */
+  .prompt-bar {
+    background: #2a2a2a;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .prompt-bar .chevron {
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .prompt-bar .input {
+    color: #ffffff;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ── Response area ── */
+  .response {
+    padding: 10px 20px 6px 36px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #1f2937;
+  }
+
+  /* ── File reads ── */
+  .file-read {
+    color: #9ca3af;
+    font-size: 13px;
+    line-height: 1.8;
+  }
+
+  /* ── Walnut / stash bordered block ── */
+  .walnut-block {
+    margin: 10px 0;
+    border-left: 2px solid #F97316;
+    padding-left: 14px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #374151;
+  }
+
+  .walnut-block .header {
+    font-weight: 600;
+    color: #374151;
+  }
+
+  .walnut-name {
+    color: #F97316;
+    font-weight: 700;
+  }
+
+  .walnut-block .detail {
+    color: #374151;
+  }
+
+  /* ── Body text ── */
+  .body-text {
+    color: #1f2937;
+    font-size: 14px;
+    line-height: 1.7;
+    margin-top: 8px;
+  }
+
+  .body-text + .body-text {
+    margin-top: 0;
+  }
+
+  .task-list {
+    margin: 8px 0;
+    padding-left: 20px;
+  }
+
+  .task-list .line {
+    line-height: 1.7;
+    color: #1f2937;
+    font-size: 14px;
+  }
+
+  .task-num {
+    color: #F97316;
+    font-weight: 600;
+  }
+
+  .person {
+    color: #2563eb;
+  }
+
+  .muted {
+    color: #9ca3af;
+  }
+
+  .spacer { height: 14px; }
+  .spacer-sm { height: 6px; }
+
+  /* ── Status bar at bottom ── */
+  .status-bar {
+    background: #06b6d4;
+    padding: 8px 20px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-top: auto;
+  }
+
+  .status-bar .session-name {
+    color: #1a1a1a;
+    font-size: 13px;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<div class="tui">
+
+  <!-- ═══ Claude Code Boot ═══ -->
+  <div style="padding: 16px 20px 8px; border-bottom: 1px solid #e5e7eb;">
+    <div style="color: #92400e; font-size: 13px; font-weight: 600; margin-bottom: 8px;">
+      ╭─ Claude Code v2.1.76 ─────────────────────────────────────────
+    </div>
+    <div style="color: #374151; font-size: 12px; line-height: 1.7;">
+      Opus 4.6 (1M context) &middot; ~/world<br>
+    </div>
+  </div>
+
+  <!-- ═══ Walnut Plugin Injection ═══ -->
+  <div class="boot-line">
+    &#x1F43F;&#xFE0F; walnut plugin injected &middot; squirrel runtime loaded &middot; context engine ready<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;world key loaded &middot; 6 rules injected &middot; 63 walnuts &middot; 329 bundles &middot; ready to stash
+  </div>
+
+  <!-- ═══ Prompt 1 ═══ -->
+  <div class="prompt-bar">
+    <span class="chevron">&#10095;</span>
+    <span class="input">i need 3 tweets for the product launch tomorrow and update the meta campaign</span>
+  </div>
+
+  <!-- ═══ Response 1 ═══ -->
+  <div class="response">
+    <div class="file-read">&#9656; key.md</div>
+    <div class="file-read">&#9656; now.md</div>
+    <div class="file-read">&#9656; tasks.md</div>
+    <div class="file-read">&#9656; log.md (8 entries)</div>
+
+    <div class="walnut-block" style="margin-top:14px;">
+      <div class="header">&#x1F43F;&#xFE0F; walnut loaded &mdash; <span class="walnut-name">side-project</span></div>
+      <div class="detail">Launch phase. Tone of voice locked last Tuesday.</div>
+      <div class="detail">Meta campaign running &mdash; CPA up 18% since Wednesday.</div>
+      <div class="detail">Next: launch day tweets + ad creative refresh.</div>
+    </div>
+
+    <div class="body-text">Here are three tweets in your voice, matched to the</div>
+    <div class="body-text">tone doc <span class="person">Sarah</span> approved last week:</div>
+
+    <div class="task-list">
+      <div class="line"><span class="task-num">1.</span> &ldquo;we&rsquo;ve been building this for 11 months. tomorrow you get it.&rdquo;</div>
+      <div class="line"><span class="task-num">2.</span> &ldquo;not another saas launch post. ok maybe a little. but this one&rsquo;s different.&rdquo;</div>
+      <div class="line"><span class="task-num">3.</span> &ldquo;the waitlist was 4k people. the product is ready. see you tomorrow.&rdquo;</div>
+    </div>
+
+    <div class="body-text">On the Meta side &mdash; your broad audience set is bleeding budget.</div>
+    <div class="body-text">CPA jumped from $6.20 to $7.30. Want me to pause it and shift</div>
+    <div class="body-text">spend to the lookalike that <span class="person">Sarah</span> set up, or keep testing?</div>
+  </div>
+
+  <!-- ═══ Prompt 2 ═══ -->
+  <div class="prompt-bar" style="margin-top: 10px;">
+    <span class="chevron">&#10095;</span>
+    <span class="input">pause the broad set, shift to lookalike. schedule tweet 1 and 3</span>
+  </div>
+
+  <!-- ═══ Response 2 ═══ -->
+  <div class="response">
+
+    <div class="walnut-block" style="margin-top: 4px;">
+      <div class="header">&#x1F43F;&#xFE0F; +3 stash (3)</div>
+      <div class="detail">Pause broad audience ad set &#8594; <span class="walnut-name">side-project</span></div>
+      <div class="detail">Shift budget to <span class="person">Sarah</span>&rsquo;s lookalike &#8594; <span class="walnut-name">side-project</span></div>
+      <div class="detail">Schedule tweets 1 &amp; 3 for launch day &#8594; <span class="walnut-name">side-project</span></div>
+      <div class="detail"><span class="muted">&#8594; drop?</span></div>
+    </div>
+
+    <div class="body-text">Done. Pulling up Meta Ads Manager now...</div>
+    <div class="spacer"></div>
+  </div>
+
+  <!-- ═══ Status bar ═══ -->
+  <div class="status-bar">
+    <span class="session-name">side-project</span>
+  </div>
+
+</div>
+
+</body>
+</html>

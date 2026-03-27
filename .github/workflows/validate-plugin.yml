@@ -1,0 +1,124 @@
+name: Validate Plugin Structure
+
+on:
+  push:
+    branches: [main]
+    paths: ['plugins/**']
+  pull_request:
+    branches: [main]
+    paths: ['plugins/**']
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate plugin structure
+        run: |
+          PLUGIN_DIR="plugins/walnut"
+          ERRORS=0
+
+          echo "=== Validating Walnut plugin structure ==="
+
+          # Check required top-level files
+          for file in CLAUDE.md; do
+            if [ ! -f "$PLUGIN_DIR/$file" ]; then
+              echo "❌ Missing required file: $PLUGIN_DIR/$file"
+              ERRORS=$((ERRORS + 1))
+            else
+              echo "✅ $PLUGIN_DIR/$file"
+            fi
+          done
+
+          # Check skills have SKILL.md
+          echo ""
+          echo "=== Skills ==="
+          for skill_dir in "$PLUGIN_DIR"/skills/*/; do
+            skill_name=$(basename "$skill_dir")
+            if [ ! -f "$skill_dir/SKILL.md" ]; then
+              echo "❌ Skill '$skill_name' missing SKILL.md"
+              ERRORS=$((ERRORS + 1))
+            else
+              # Check SKILL.md has frontmatter
+              if ! head -1 "$skill_dir/SKILL.md" | grep -q "^---"; then
+                echo "❌ Skill '$skill_name' SKILL.md missing frontmatter"
+                ERRORS=$((ERRORS + 1))
+              else
+                echo "✅ $skill_name"
+              fi
+            fi
+          done
+
+          # Check rules have frontmatter
+          echo ""
+          echo "=== Rules ==="
+          for rule_file in "$PLUGIN_DIR"/rules/*.md; do
+            rule_name=$(basename "$rule_file")
+            if ! head -1 "$rule_file" | grep -q "^---"; then
+              echo "❌ Rule '$rule_name' missing frontmatter"
+              ERRORS=$((ERRORS + 1))
+            else
+              echo "✅ $rule_name"
+            fi
+          done
+
+          # Check hooks.json exists and references valid scripts
+          echo ""
+          echo "=== Hooks ==="
+          HOOKS_JSON="$PLUGIN_DIR/hooks/hooks.json"
+          if [ ! -f "$HOOKS_JSON" ]; then
+            echo "❌ Missing hooks.json"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "✅ hooks.json exists"
+            # Extract script paths from hooks.json and verify they exist
+            SCRIPTS=$(grep -o '"command":\s*"[^"]*"' "$HOOKS_JSON" | sed 's/"command":\s*"//;s/"//' | grep -o '[^ ]*\.sh')
+            for script in $SCRIPTS; do
+              script_path="$PLUGIN_DIR/hooks/scripts/$(basename "$script")"
+              if [ ! -f "$script_path" ]; then
+                echo "❌ Hook references missing script: $script"
+                ERRORS=$((ERRORS + 1))
+              else
+                echo "✅ $(basename "$script")"
+              fi
+            done
+          fi
+
+          # Check templates exist
+          echo ""
+          echo "=== Templates ==="
+          for template_dir in world walnut capsule squirrel; do
+            if [ ! -d "$PLUGIN_DIR/templates/$template_dir" ]; then
+              echo "⚠️  Template directory '$template_dir' not found (optional)"
+            else
+              file_count=$(find "$PLUGIN_DIR/templates/$template_dir" -type f | wc -l)
+              echo "✅ $template_dir ($file_count files)"
+            fi
+          done
+
+          # Check no secrets
+          echo ""
+          echo "=== Security ==="
+          if grep -rn "sk-[a-zA-Z0-9]\{20,\}\|ghp_[a-zA-Z0-9]\{36\}\|gho_[a-zA-Z0-9]\{36\}\|AKIA[A-Z0-9]\{16\}" "$PLUGIN_DIR"/ 2>/dev/null; then
+            echo "❌ Possible API key or secret detected"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "✅ No secrets detected"
+          fi
+
+          echo ""
+          echo "=== Summary ==="
+          SKILL_COUNT=$(find "$PLUGIN_DIR/skills" -name "SKILL.md" | wc -l)
+          RULE_COUNT=$(find "$PLUGIN_DIR/rules" -name "*.md" | wc -l)
+          HOOK_COUNT=$(find "$PLUGIN_DIR/hooks/scripts" -name "*.sh" 2>/dev/null | wc -l)
+          echo "Skills: $SKILL_COUNT | Rules: $RULE_COUNT | Hooks: $HOOK_COUNT"
+
+          if [ $ERRORS -gt 0 ]; then
+            echo ""
+            echo "❌ Validation failed with $ERRORS error(s)"
+            exit 1
+          else
+            echo ""
+            echo "✅ All checks passed"
+          fi

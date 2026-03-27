@@ -1,0 +1,9 @@
+name: "walnut"
+description: "Give any AI agent a memory that compounds. Open source. Plain files. Your machine."
+tags: [plugin, ai, claude-code, context, memory, local-first, markdown, productivity]
+author: "Stack Walnuts"
+category: "plugin"
+url: "https://walnut.world"
+repo: "https://github.com/stackwalnuts/claude-code"
+version: "0.2.0"
+license: "MIT"
