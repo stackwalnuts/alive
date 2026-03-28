@@ -21,7 +21,7 @@
 
 ```bash
 # Claude Code
-claude plugin install walnut@stackwalnuts
+claude plugin install walnut@walnut
 
 # Everything else (Hermes, Claude Desktop, Cursor, Windsurf, Cline)
 npx @lock-in-lab/walnut setup
@@ -106,7 +106,7 @@ Traditional folder hierarchies break down when your agent can search everything.
 
 | Platform | Install | |
 |----------|---------|---|
-| **Claude Code** | `claude plugin install walnut@stackwalnuts` | Full plugin — 12 skills, hooks, rules, stash protocol |
+| **Claude Code** | `claude plugin install walnut@walnut` | Full plugin — 12 skills, hooks, rules, stash protocol |
 
 ### MCP Ecosystem
 

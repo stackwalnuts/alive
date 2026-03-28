@@ -208,6 +208,29 @@ if [ -f "$USER_SETTINGS" ]; then
   fi
 fi
 
+# Sync custom skill symlinks: .walnut/skills/*/SKILL.md → .claude/skills/*/SKILL.md
+# Claude Code only discovers skills in .claude/skills/. Custom skills live in .walnut/skills/.
+# This bridge ensures user-created skills are always discoverable.
+CUSTOM_SKILLS_DIR="$WORLD_ROOT/.walnut/skills"
+CLAUDE_SKILLS_DIR="$WORLD_ROOT/.claude/skills"
+if [ -d "$CUSTOM_SKILLS_DIR" ]; then
+  mkdir -p "$CLAUDE_SKILLS_DIR"
+  for skill_dir in "$CUSTOM_SKILLS_DIR"/*/; do
+    [ -d "$skill_dir" ] || continue
+    SKILL_NAME=$(basename "$skill_dir")
+    SKILL_SRC="$skill_dir/SKILL.md"
+    SKILL_DST_DIR="$CLAUDE_SKILLS_DIR/$SKILL_NAME"
+    SKILL_DST="$SKILL_DST_DIR/SKILL.md"
+    if [ -f "$SKILL_SRC" ]; then
+      # Create target dir and symlink if missing or broken
+      if [ ! -L "$SKILL_DST" ] || [ "$(readlink "$SKILL_DST")" != "$SKILL_SRC" ]; then
+        mkdir -p "$SKILL_DST_DIR"
+        ln -sf "$SKILL_SRC" "$SKILL_DST"
+      fi
+    fi
+  done
+fi
+
 # Read world key (.walnut/key.md) for injection
 WORLD_KEY_CONTENT=""
 WORLD_KEY_FILE="$WORLD_ROOT/.walnut/key.md"

@@ -63,6 +63,19 @@ Before writing anything:
 
 These persist across plugin updates. They're the human's own.
 
+### 3.5. Symlink for Discovery
+
+Claude Code only discovers skills in `.claude/skills/`. After writing a custom skill to `.walnut/skills/`, **always create the symlink**:
+
+```bash
+mkdir -p .claude/skills/{skill-name}
+ln -sf .walnut/skills/{skill-name}/SKILL.md .claude/skills/{skill-name}/SKILL.md
+```
+
+The session-new hook auto-syncs these on every startup, but creating the symlink immediately means the skill is available in the current session without restart.
+
+**This is mandatory.** A skill without its symlink is invisible to Claude Code.
+
 ### 4. Validate
 
 After writing:

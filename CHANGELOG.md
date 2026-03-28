@@ -14,7 +14,7 @@ First release as **Walnut**. Everything that was "alive" is now "walnut."
 - **System folder:** `.alive/` → `.walnut/`
 - **All 15 hook scripts:** `alive-*` → `walnut-*`
 - **Marketplace:** name `alivecomputer` → `stackwalnuts`
-- **Install:** `claude plugin install walnut@stackwalnuts`
+- **Install:** `claude plugin install walnut@walnut`
 
 ### Added
 - **Auto-migration:** session-new hook detects `.alive/` and renames to `.walnut/` automatically
