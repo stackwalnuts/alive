@@ -181,8 +181,9 @@ fi
 LAST_CHECK_TIME=$(cat "$LASTCHECK" 2>/dev/null || echo "0")
 
 # Check if now.json or log.md were modified after our last check
+# v3 flat: _kernel/now.json, _kernel/tasks.json  |  v2: _kernel/_generated/now.json  |  v1: now.md
 CHANGED=""
-for file in "$WALNUT_KERNEL/now.json" "$WALNUT_KERNEL/now.md" "$WALNUT_KERNEL/log.md" "$WALNUT_KERNEL/tasks.md"; do
+for file in "$WALNUT_KERNEL/now.json" "$WALNUT_KERNEL/_generated/now.json" "$WALNUT_KERNEL/tasks.json" "$WALNUT_KERNEL/now.md" "$WALNUT_KERNEL/log.md" "$WALNUT_KERNEL/tasks.md"; do
   if [ -f "$file" ]; then
     # Get file mtime as epoch seconds
     if stat --version >/dev/null 2>&1; then
@@ -204,12 +205,19 @@ date +%s > "$LASTCHECK"
 
 # Check if the change was made by US (same session_id in now.json squirrel field)
 # now.json uses short IDs (first 8 chars), hook gets full UUID -- check both
+# v3 flat: _kernel/now.json  |  v2: _kernel/_generated/now.json  |  v1: now.md
 LAST_SQUIRREL=""
+NOW_JSON_PATH=""
 if [ -f "$WALNUT_KERNEL/now.json" ]; then
+  NOW_JSON_PATH="$WALNUT_KERNEL/now.json"
+elif [ -f "$WALNUT_KERNEL/_generated/now.json" ]; then
+  NOW_JSON_PATH="$WALNUT_KERNEL/_generated/now.json"
+fi
+if [ -n "$NOW_JSON_PATH" ]; then
   if [ "$ALIVE_JSON_RT" = "python3" ]; then
-    LAST_SQUIRREL=$(python3 -c "import json; d=json.load(open('$WALNUT_KERNEL/now.json')); print(d.get('squirrel',''))" 2>/dev/null || true)
+    LAST_SQUIRREL=$(python3 -c "import json; d=json.load(open('$NOW_JSON_PATH')); print(d.get('squirrel',''))" 2>/dev/null || true)
   elif [ "$ALIVE_JSON_RT" = "node" ]; then
-    LAST_SQUIRREL=$(node -e "try{const d=JSON.parse(require('fs').readFileSync('$WALNUT_KERNEL/now.json','utf8'));console.log(d.squirrel||'')}catch(e){console.log('')}" 2>/dev/null || true)
+    LAST_SQUIRREL=$(node -e "try{const d=JSON.parse(require('fs').readFileSync('$NOW_JSON_PATH','utf8'));console.log(d.squirrel||'')}catch(e){console.log('')}" 2>/dev/null || true)
   fi
 elif [ -f "$WALNUT_KERNEL/now.md" ]; then
   LAST_SQUIRREL=$(grep '^squirrel:' "$WALNUT_KERNEL/now.md" 2>/dev/null | sed 's/squirrel: *//' | tr -d '[:space:]' || true)
@@ -220,7 +228,7 @@ if [ "${LAST_SQUIRREL:-}" = "$SESSION_ID" ] || [ "${LAST_SQUIRREL:-}" = "$SHORT_
 fi
 
 # Another session modified the walnut -- notify
-CONTEXT_MSG="Another session just saved to ${WALNUT}. Changed:${CHANGED}. You should re-read _kernel/now.json, bundles/*/tasks.md and _kernel/log.md before continuing -- your context may be stale. Ask the human if they want you to refresh."
+CONTEXT_MSG="Another session just saved to ${WALNUT}. Changed:${CHANGED}. You should re-read _kernel/now.json, _kernel/tasks.json and _kernel/log.md before continuing -- your context may be stale. Ask the human if they want you to refresh."
 CONTEXT_ESCAPED=$(escape_for_json "$CONTEXT_MSG")
 cat <<CHANGEEOF
 {

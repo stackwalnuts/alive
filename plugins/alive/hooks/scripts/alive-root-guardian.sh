@@ -40,7 +40,7 @@ if [ "$FILE_NAME" = "Icon" ] || [ "$FILE_NAME" = $'Icon\r' ]; then
 fi
 
 # Block everything else -- tell the squirrel where things should go
-REASON="Cannot write '${FILE_NAME}' to the world root. Nothing lives at root except the 5 domain folders (01_Archive through 05_Experiments) and hidden files. Route this to the right place: if it belongs to a walnut, put it in that walnut's bundles/ or live context. If it's an input, put it in 03_Inputs/. If it's a new project, create a walnut with alive:create-walnut. Ask the human where it should go."
+REASON="Cannot write '${FILE_NAME}' to the world root. Nothing lives at root except the 5 domain folders (01_Archive through 05_Experiments) and hidden files. Route this to the right place: if it belongs to a walnut, put it in that walnut's _kernel/ or as a deliverable in the walnut root. If it's an input, put it in 03_Inputs/. If it's a new project, create a walnut with alive:create-walnut. Ask the human where it should go."
 
 ESCAPED_REASON=$(escape_for_json "$REASON")
 echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"${ESCAPED_REASON}\"}}"

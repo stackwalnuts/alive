@@ -10,10 +10,11 @@ read_hook_input
 find_world || exit 0
 
 # Only fire when the written file is now.json or now.md
+# v3 flat: _kernel/now.json  |  v2: _kernel/_generated/now.json  |  v1: now.md
 FILE_PATH=$(json_field "tool_input.file_path")
 
 case "$FILE_PATH" in
-  */now.json|*/now.md) ;;
+  */_kernel/now.json|*/_kernel/_generated/now.json|*/now.json|*/now.md) ;;
   *) exit 0 ;;
 esac
 
