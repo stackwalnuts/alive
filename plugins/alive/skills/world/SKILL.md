@@ -18,12 +18,12 @@ NOT a database dump. NOT a flat list. A living view of their world, grouped by w
 2. **If no index exists at all** — generate it first (`python3 .alive/scripts/generate-index.py "$WORLD_ROOT"`), then read the output. If the script doesn't exist either, fall back to manual scanning: use Glob to find all `*/_kernel/key.md` files across the World, read each one's frontmatter (type, goal, rhythm, people, links, parent), then read matching `_kernel/now.json` frontmatter (phase, updated, next, bundle). Dispatch these reads as parallel subagents to keep it fast. This fallback only happens on first-time setup before the index infrastructure exists.
 3. Build the tree from the index — parent/child relationships from `parent:` field
 4. **Lightweight fresh checks** — one Bash call each, no subagents, no Explore agents:
-   - **Unsigned squirrels with stash:** `cd .alive/_squirrels && for f in *.yaml; do grep -q "saves: 0" "$f" && ! grep -q "stash: \[\]" "$f" && echo "$f"; done 2>/dev/null` — if any files are returned, read those specific YAMLs to surface the stash items. If nothing returned, skip.
+   - **Unsigned squirrels with stash:** already in the index as `unsigned_with_stash:`. If non-zero, surface in the Attention section. No bash loop needed.
    - **Unrouted inputs:** `ls 03_Inputs/ 2>/dev/null | grep -v '^\.' | grep -v '^Icon'` — just the filenames, no deep reads.
    - **API context:** only if context sources are listed in the session start injection (already in your context from the hook — do NOT re-read preferences.yaml).
 5. Compute attention items from fresh checks + index staleness signals
 
-**DO NOT read preferences.yaml** — it's already injected at session start. **DO NOT read individual walnut files** (key.md, now.json, log.md) — the index has everything. **DO NOT spawn Explore agents or subagents** for the dashboard — use the index and the three bash checks above. The entire dashboard should render from data already in context plus 2-3 fast bash calls.
+**DO NOT read preferences.yaml** — it's already injected at session start. **DO NOT read individual walnut files** (key.md, now.json, log.md) — the index has everything. **DO NOT read .alive/_squirrels/*.yaml files** — recent sessions are in the index under `recent_sessions:` and unsigned stash count is in `unsigned_with_stash:`. **DO NOT spawn Explore agents or subagents** for the dashboard — use the index and the one bash check above. The entire dashboard should render from data already in context plus 1 fast bash call (inputs listing).
 
 ## State Detection
 
@@ -154,6 +154,8 @@ Key features:
 ### Section 4: Recent Squirrel Activity
 
 What's been happening across the world. A pulse check.
+
+Recent session data is IN the index under `recent_sessions:`. Do NOT read individual squirrel YAML files. Do NOT run bash loops to grep squirrel entries. The index has everything: squirrel ID, walnut, date, bundle, saves count, summary, and tags for the 10 most recent sessions. The index also includes `unsigned_with_stash:` count -- if non-zero, surface it in the Attention section.
 
 ```
 ╭─ 🐿️ recent activity
