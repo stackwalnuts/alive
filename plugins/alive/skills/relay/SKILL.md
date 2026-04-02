@@ -194,7 +194,26 @@ JSONEOF
 │  Config: $HOME/.alive/relay/relay.json
 │
 │  Next: /alive:relay add <github-username> to invite a peer.
+│  After they accept, /alive:share to push packages directly.
 ╰─
+```
+
+The "After they accept..." line is only shown when `discovery_hints` is true (same check pattern as share skill).
+
+**Auto-retire discovery_hints:** After setup completes, write `discovery_hints: false` to `~/.alive/preferences.yaml`:
+
+```bash
+python3 -c "
+import pathlib, re
+p = pathlib.Path.home() / '.alive' / 'preferences.yaml'
+if p.exists():
+    text = p.read_text()
+    if re.search(r'^discovery_hints:', text, re.MULTILINE):
+        text = re.sub(r'^discovery_hints:.*$', 'discovery_hints: false', text, flags=re.MULTILINE)
+    else:
+        text = text.rstrip() + '\ndiscovery_hints: false\n'
+    p.write_text(text)
+"
 ```
 
 ---
@@ -428,11 +447,12 @@ Same as Add Peer step 5 -- scan People/ and 02_Life/people/ for the peer.
 │  Public key cached: $HOME/.alive/relay/keys/peers/<inviter>.pem
 │  Bidirectional: <yes/skipped>
 │
-│  You can now:
-│  - /alive:share to push packages to <inviter> via relay
-│  - /alive:receive --relay to pull packages from your inbox
+│  You're connected. Push with /alive:share,
+│  pull with /alive:receive --relay.
 ╰─
 ```
+
+**Auto-retire discovery_hints:** After accept completes, write `discovery_hints: false` to `~/.alive/preferences.yaml` (same pattern as setup completion above).
 
 ---
 
