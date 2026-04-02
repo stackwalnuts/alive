@@ -57,7 +57,7 @@ Or triggered from session-start notification ("You have N walnut package(s) wait
 
 1. Read `$HOME/.alive/relay/relay.json` -- get username and repo
 2. Read `$HOME/.alive/relay/state.json` -- get pending count
-3. If no relay configured, stop: "No relay configured. Run `/alive:relay setup` first."
+3. If no relay configured, stop: "No relay configured. Run `/alive:relay setup` first. Tip: After setup, run `/alive:receive --relay` again to pull packages." The `Tip:` portion is only shown when `discovery_hints` is true (same check pattern as share skill).
 4. If pending_packages == 0, check anyway (state may be stale):
 
 ```bash
