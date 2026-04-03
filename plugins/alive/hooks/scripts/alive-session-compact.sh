@@ -77,9 +77,12 @@ if [ -n "${WALNUT:-}" ] && [ "$WALNUT" != "null" ]; then
   # Find walnut directory, check _kernel/ first (canonical), fall back to walnut root (legacy)
   WALNUT_DIR=$(find "$WORLD_ROOT" -path "*/01_Archive" -prune -o -type d -name "$WALNUT" -print -quit 2>/dev/null || true)
   if [ -n "${WALNUT_DIR:-}" ] && [ -d "$WALNUT_DIR" ]; then
-    # Check _kernel/ first (canonical), fall back to walnut root (legacy)
+    # Check _kernel/ first (v3 flat), fall back to _kernel/_generated/ (v2), then walnut root (v1)
     if [ -f "$WALNUT_DIR/_kernel/now.json" ]; then
       NOW_CONTENT=$(head -30 "$WALNUT_DIR/_kernel/now.json")
+      [ -f "$WALNUT_DIR/_kernel/key.md" ] && KEY_CONTENT=$(head -30 "$WALNUT_DIR/_kernel/key.md")
+    elif [ -f "$WALNUT_DIR/_kernel/_generated/now.json" ]; then
+      NOW_CONTENT=$(head -30 "$WALNUT_DIR/_kernel/_generated/now.json")
       [ -f "$WALNUT_DIR/_kernel/key.md" ] && KEY_CONTENT=$(head -30 "$WALNUT_DIR/_kernel/key.md")
     elif [ -f "$WALNUT_DIR/_kernel/now.md" ]; then
       NOW_CONTENT=$(head -30 "$WALNUT_DIR/_kernel/now.md")
@@ -109,7 +112,7 @@ ${NOW_CONTENT:-no now.json found}
 Identity:
 ${KEY_CONTENT:-no key.md found}
 
-IMPORTANT: Re-read key.md, now.json, tasks.md before continuing work (check _kernel/ first, fall back to walnut root). Do not trust memory of files read before compaction."
+IMPORTANT: Re-read key.md, now.json, tasks.json before continuing work (check _kernel/ first, fall back to walnut root). Do not trust memory of files read before compaction."
 
 # Escape and combine
 SESSION_MSG_ESCAPED=$(escape_for_json "$SESSION_MSG")

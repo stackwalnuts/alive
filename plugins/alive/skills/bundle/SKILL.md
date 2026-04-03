@@ -36,6 +36,25 @@ Living reference material that grows over time. No "done" state — it accumulat
 
 ---
 
+## Bundle Location
+
+Bundles live flat in the walnut root. A folder is a bundle if it contains `context.manifest.yaml`.
+
+```
+nova-station/                   # walnut root
+  _kernel/
+  shielding-review/             # bundle
+    context.manifest.yaml
+    raw/
+  launch-checklist/             # another bundle
+    context.manifest.yaml
+    raw/
+```
+
+No `bundles/` subdirectory. Every bundle sits directly in the walnut root alongside `_kernel/`.
+
+---
+
 ## Operations
 
 ### Create
@@ -48,15 +67,15 @@ When no active bundle matches the current work:
 4. Confirm:
 
 ```
-╭─ squirrel new bundle
+╭─ 🐿️ new bundle
 │
 │  Name:    shielding-review
 │  Type:    outcome
 │  Walnut:  nova-station
 │  Goal:    Evaluate radiation shielding vendors for habitat module
-│  Path:    bundles/shielding-review/
+│  Path:    shielding-review/
 │
-│  > Good?
+│  ▸ Good?
 │  1. Create
 │  2. Change name
 │  3. Make it evergreen instead
@@ -66,10 +85,13 @@ When no active bundle matches the current work:
 
 5. Read `templates/bundle/context.manifest.yaml`
 6. Fill placeholders: `{{goal}}`, `{{date}}`, `{{session_id}}`, `{{type}}`
-7. Create `bundles/{name}/context.manifest.yaml`
-8. Create `bundles/{name}/raw/` (empty directory)
-9. Update `_kernel/now.json` -> set `bundle: {name}`
+7. Create `{walnut}/{name}/context.manifest.yaml`
+8. Create `{walnut}/{name}/raw/` (empty directory)
+9. Note: `project.py` will pick up the new bundle on next save — no manual now.json update needed
 10. Stash: "Created bundle: {name}" (type: note)
+
+Do NOT create `tasks.md` or `tasks.json` — tasks are created on demand via `tasks.py add`.
+Do NOT create `observations.md` — removed in v3.
 
 The first draft file is `{name}-draft-01.md` when the human starts writing.
 
@@ -91,6 +113,7 @@ sensitivity: normal        # normal | private | shared
 shared: []
 discovered: {}
 
+parent_bundle:             # name of parent bundle, if nested
 tags: []
 people: []
 sources: []
@@ -103,6 +126,7 @@ sources: []
   - `normal` — can be shared freely
   - `private` — excluded from walnut.world publishing, flagged on share attempts
   - `shared` — actively published or shared with specific people
+- `parent_bundle` — if this bundle is nested inside another, records the parent's name
 - `discovered` — populated by `alive:mine-for-context` with extraction tracking
 - `sources` — paths to raw material or linked references from other bundles
 
@@ -129,7 +153,7 @@ shared:
 6. Update sensitivity to `shared` if it was `normal`
 
 ```
-╭─ squirrel bundle shared
+╭─ 🐿️ bundle shared
 │  shielding-review draft-02 -> Sue Chen via email
 │  Status: draft -> published
 ╰─
@@ -145,7 +169,7 @@ When the human wants to publish a bundle to walnut.world:
 4. Update `context.manifest.yaml` with publication record
 
 ```
-╭─ squirrel bundle published to walnut.world
+╭─ 🐿️ bundle published to walnut.world
 │  shielding-review v1 -> ben.walnut.world/shielding-review
 │  Sensitivity: shared (public)
 ╰─
@@ -155,28 +179,29 @@ When the human wants to publish a bundle to walnut.world:
 
 ### Graduate
 
-When a bundle has a `*-v1.md` file or the human explicitly requests graduation:
+Graduation is a status flip, not a folder move. The bundle stays where it is.
 
-**Outcome bundle -> walnut root:**
+**Outcome bundle graduation:**
 
-1. Detect: scan `bundles/{name}/` for files matching `*-v1.md` or `*-v1.html`
+1. Detect: scan `{walnut}/{name}/` for files matching `*-v1.md` or `*-v1.html`
 2. Confirm with the human:
 
 ```
-╭─ squirrel graduation ready
-│  shielding-review has a v1. Graduate to walnut root?
+╭─ 🐿️ graduation ready
+│  shielding-review has a v1. Mark as done?
 │
-│  > Graduate?
-│  1. Yes — move to walnut root
+│  ▸ Graduate?
+│  1. Yes — mark done
 │  2. Not yet
 ╰─
 ```
 
 3. If confirmed:
-   - Move the entire `bundles/{name}/` folder to walnut root `{name}/`
-   - Update context.manifest.yaml status to `done`
+   - Update `context.manifest.yaml` status to `done` (or `published` if shared)
+   - The v1 output file stays inside the bundle folder
+   - The bundle folder stays where it is in the walnut root
    - Update `_kernel/now.json` -> clear `bundle` if this was the active bundle
-   - Log entry: "Bundle {name} graduated to walnut root"
+   - Log entry: "Bundle {name} graduated — status: done"
 
 **Bundle -> walnut graduation** (when a bundle outgrows its container):
 
@@ -184,7 +209,7 @@ When a bundle has a `*-v1.md` file or the human explicitly requests graduation:
 2. Determine ALIVE domain and walnut name
 3. Scaffold new walnut (invoke the create flow)
 4. Seed `_kernel/key.md` from bundle context.manifest.yaml (goal, tags, people carry over)
-5. Move bundle contents into new walnut's `bundles/` as the first bundle
+5. Move bundle contents into new walnut root as the first bundle
 6. Log entry in BOTH parent walnut ("Bundle {name} graduated to walnut") and new walnut ("Graduated from {parent}")
 7. Add wikilink `[[new-walnut]]` to parent's `_kernel/key.md` `links:`
 
@@ -192,24 +217,46 @@ When a bundle has a `*-v1.md` file or the human explicitly requests graduation:
 
 ### Sub-Bundles
 
-Bundles can contain sub-bundles for complex work that has distinct sub-deliverables:
+Bundles nest directly inside other bundle folders. No intermediate `bundles/` directory.
 
 ```
-bundles/ecosystem-launch/
-  context.manifest.yaml          # Parent bundle
-  bundles/                       # Sub-bundles
-    website/
-      context.manifest.yaml
-    waitlist/
-      context.manifest.yaml
-  raw/                           # Shared raw material
+ecosystem-launch/                     # parent bundle
+  context.manifest.yaml               # parent manifest (parent_bundle: blank)
+  raw/
+  website/                            # sub-bundle
+    context.manifest.yaml             # parent_bundle: ecosystem-launch
+  waitlist/                           # sub-bundle
+    context.manifest.yaml             # parent_bundle: ecosystem-launch
+```
+
+Deeper nesting works the same way:
+
+```
+research/
+  context.manifest.yaml
+  market-analysis/
+    context.manifest.yaml             # parent_bundle: research
+    competitor-deep-dive/
+      context.manifest.yaml           # parent_bundle: market-analysis
 ```
 
 Sub-bundle rules:
+- `parent_bundle:` in the manifest records the relationship
 - Sub-bundles inherit `sensitivity` from parent unless overridden
 - Sub-bundle status is independent of parent status
-- Parent `context.manifest.yaml` lists sub-bundles in a `children:` field
-- Sub-bundles can graduate independently (move to parent's `bundles/` level or to walnut root)
+- Graduation is a status flip — sub-bundles stay nested where they are
+
+---
+
+### Tasks
+
+Bundle tasks are operated exclusively through `tasks.py` CLI. Never read or write `tasks.json` directly.
+
+- **Add a task:** `tasks.py add --walnut {path} --bundle {name} --title "Write vendor comparison"`
+- **Complete a task:** `tasks.py done --walnut {path} --bundle {name} --id {task_id}`
+- **List tasks:** `tasks.py list --walnut {path} --bundle {name}`
+
+`tasks.json` is created automatically on the first `tasks.py add` call. Do not scaffold an empty tasks file during bundle creation.
 
 ---
 
@@ -218,7 +265,7 @@ Sub-bundle rules:
 Show the current state of bundles in the active walnut:
 
 ```
-╭─ squirrel bundles in nova-station
+╭─ 🐿️ bundles in nova-station
 │
 │  Active: shielding-review (outcome, draft, draft-02)
 │    Goal: Evaluate radiation shielding vendors
@@ -229,7 +276,7 @@ Show the current state of bundles in the active walnut:
 │    safety-brief — outcome, done, shared with FAA (2026-03-10)
 │    vendor-database — evergreen, active
 │
-│  > Work on one?
+│  ▸ Work on one?
 │  1. shielding-review (continue)
 │  2. launch-checklist
 │  3. vendor-database
@@ -237,7 +284,7 @@ Show the current state of bundles in the active walnut:
 ╰─
 ```
 
-Read all bundle `context.manifest.yaml` files in `bundles/` to build this view. Show type, status, current version, goal, last session, and shares.
+Scan the walnut root for directories containing `context.manifest.yaml` to build this view. Show type, status, current version, goal, last session, and shares.
 
 ---
 
@@ -247,7 +294,7 @@ Read all bundle `context.manifest.yaml` files in `bundles/` to build this view. 
 - Shipped: `{bundle-name}-v1.md`
 - Visual versions: same pattern with `.html` extension
 
-The bundle name is in every filename. When graduated to walnut root, the folder is self-documenting.
+The bundle name is in every filename. The bundle folder is self-documenting.
 
 ---
 
@@ -257,7 +304,7 @@ The bundle name is in every filename. When graduated to walnut root, the folder 
 
 **Save** checks bundle state in its integrity step — was a bundle worked on? Was one shared? This skill handles the actual context.manifest.yaml updates.
 
-**Tidy** scans for `*-v1.md` still in `bundles/` and surfaces graduation candidates.
+**Tidy** scans for `*-v1.md` in bundles still marked `draft` or `prototype` and surfaces graduation candidates (status flip, not folder move).
 
 **Create** delegates bundle scaffolding to this skill rather than handling it inline.
 

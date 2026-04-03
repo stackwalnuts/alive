@@ -16,7 +16,7 @@ links: []
 ## Domains
 
 - **02_Life/** — Personal. Goals, people, patterns.
-- **03_Inputs/** — Buffer. Content arrives, gets routed out.
+- **03_Inbox/** — Buffer. Content arrives, gets routed out.
 - **04_Ventures/** — Revenue intent. Businesses, clients, products.
 - **05_Experiments/** — Testing grounds. Ideas, prototypes.
 
@@ -30,7 +30,7 @@ links: []
      - **Slack** — via MCP server. Posts to channels, reads history.
      - **Notion** — via MCP server. Task management, knowledge base.
      - **Otter** — transcript sync script at ~/scripts/otter-sync.sh
-     - **GitHub** — via gh CLI. Repos: stackwalnuts/claude-code
+     - **GitHub** — via gh CLI. Repos: alivecontext/claude-code
 -->
 
 ## Key People

@@ -1,8 +1,9 @@
 #!/bin/bash
 # Hook: Post Write -- PostToolUse (Write|Edit)
-# Two jobs:
+# Three jobs:
 # 1. Track write activity for statusline display
-# 2. Regenerate world index after save (detected by _kernel/now.json write)
+# 2. Run project.py when log.md is written (generates now.json)
+# 3. Regenerate world index after save (detected by _kernel/now.json write)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/alive-common.sh"
@@ -21,14 +22,51 @@ if [ -n "${HOOK_SESSION_ID}" ]; then
   fi
 fi
 
-# Regenerate world index after save
-# now.json is only written by save (per rules) -- use it as the trigger
+# Run project.py when log.md is written (save protocol always writes log entry)
+# Chain: log.md write -> project.py -> now.json write -> generate-index.py
 FILE_PATH=$(json_field "tool_input.file_path")
 case "$FILE_PATH" in
-  */_kernel/now.json|*/_kernel/now.md)
-    GENERATOR="$WORLD_ROOT/.alive/scripts/generate-index.py"
-    # Fall back to plugin scripts dir
-    [ ! -f "$GENERATOR" ] && GENERATOR="${CLAUDE_PLUGIN_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}/scripts/generate-index.py"
+  */log.md)
+    PROJECTOR="${CLAUDE_PLUGIN_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}/scripts/project.py"
+    if [ -f "$PROJECTOR" ]; then
+      # Extract walnut path by walking up from written file until finding _kernel/ parent
+      WALNUT_PATH=""
+      CHECK_DIR="$(dirname "$FILE_PATH")"
+      while [ "$CHECK_DIR" != "/" ] && [ "$CHECK_DIR" != "$WORLD_ROOT" ]; do
+        if [ "$(basename "$CHECK_DIR")" = "_kernel" ]; then
+          WALNUT_PATH="$(dirname "$CHECK_DIR")"
+          break
+        fi
+        CHECK_DIR="$(dirname "$CHECK_DIR")"
+      done
+      if [ -n "$WALNUT_PATH" ]; then
+        # Debounce -- skip if we ran project.py for this walnut in the last 5 minutes
+        WALNUT_HASH=$(printf '%s' "$WALNUT_PATH" | md5sum 2>/dev/null | cut -d' ' -f1 || printf '%s' "$WALNUT_PATH" | md5 2>/dev/null | tr -d '[:space:]' || echo "default")
+        MARKER="/tmp/alive-project-${WALNUT_HASH}"
+        if [ -f "$MARKER" ]; then
+          if stat --version >/dev/null 2>&1; then
+            MARKER_MTIME=$(stat -c %Y "$MARKER" 2>/dev/null || echo "0")
+          else
+            MARKER_MTIME=$(stat -f %m "$MARKER" 2>/dev/null || echo "0")
+          fi
+          AGE=$(( $(date +%s) - MARKER_MTIME ))
+          [ "$AGE" -lt 300 ] && break
+        fi
+        touch "$MARKER"
+        # Background -- don't block the session
+        if [ "$ALIVE_JSON_RT" = "python3" ]; then
+          python3 "$PROJECTOR" --walnut "$WALNUT_PATH" > /dev/null 2>&1 &
+        fi
+      fi
+    fi
+    ;;
+esac
+
+# Regenerate world index after save
+# now.json is only written by save (per rules) -- use it as the trigger
+case "$FILE_PATH" in
+  */_kernel/now.json|*/_kernel/_generated/now.json|*/_kernel/now.md)
+    GENERATOR="${CLAUDE_PLUGIN_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}/scripts/generate-index.py"
     if [ -f "$GENERATOR" ]; then
       # Debounce -- skip if we regenerated in the last 5 minutes
       MARKER="/tmp/alive-index-regen"

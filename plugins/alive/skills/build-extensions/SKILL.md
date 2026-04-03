@@ -19,7 +19,7 @@ Not about adjusting preferences or voice (that's `alive:settings`). Extend is ab
 | **Skill** | Repeatable workflow with instructions | `.alive/skills/{skill-name}/SKILL.md` |
 | **Rule** | Behavioral constraint or guide | `.alive/rules/{rule-name}.md` |
 | **Hook** | Automated trigger on system events | `.alive/hooks/` (scripts + hooks.json) |
-| **Plugin** | Distributable package of skills + rules + hooks | Hands off to `contributor@stackwalnuts` |
+| **Plugin** | Distributable package of skills + rules + hooks | Hands off to `contributor@alivecontext` |
 
 ---
 
@@ -192,13 +192,13 @@ When a custom skill is polished and battle-tested:
 ╰─
 ```
 
-**Contributor plugin handoff:** For marketplace packaging, PII stripping, testing, and publishing -> suggest installing `contributor@stackwalnuts`. This is a SEPARATE plugin, not part of the alive core. The extend skill's job ends at building working custom capabilities. The contributor plugin handles everything from packaging to publishing.
+**Contributor plugin handoff:** For marketplace packaging, PII stripping, testing, and publishing -> suggest installing `contributor@alivecontext`. This is a SEPARATE plugin, not part of the alive core. The extend skill's job ends at building working custom capabilities. The contributor plugin handles everything from packaging to publishing.
 
 ```
 ╭─ squirrel to publish this skill:
 │
 │  1. Install the contributor plugin:
-│     claude plugin install contributor@stackwalnuts
+│     claude plugin install contributor@alivecontext
 │
 │  2. Run: alive:contribute {skill-name}
 │     It handles: PII check, packaging, testing, submission

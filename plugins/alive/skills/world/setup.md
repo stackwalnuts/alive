@@ -379,7 +379,7 @@ Create these directories (use `mkdir -p`):
 01_Archive/
 02_Life/
 02_Life/goals/
-03_Inputs/
+03_Inbox/
 04_Ventures/
 05_Experiments/
 People/
@@ -392,7 +392,7 @@ Show:
 │  ▸ 01_Archive/
 │  ▸ 02_Life/
 │  ▸ 02_Life/goals/
-│  ▸ 03_Inputs/
+│  ▸ 03_Inbox/
 │  ▸ 04_Ventures/
 │  ▸ 05_Experiments/
 │  ▸ People/
@@ -589,7 +589,7 @@ Display this summary. Fill in actual values for every placeholder.
 | `01_Archive/` | Graduated walnuts |
 | `People/` | Person walnuts (legacy: `02_Life/people/` still recognized) |
 | `02_Life/goals/` | Life goals |
-| `03_Inputs/` | Buffer — content arrives, gets routed out within 48h |
+| `03_Inbox/` | Buffer — content arrives, gets routed out within 48h |
 | `04_Ventures/` | Revenue intent |
 | `05_Experiments/` | Testing grounds |
 | `.alive/key.md` | World identity (name, goal, timezone, people, connections) |

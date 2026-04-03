@@ -33,12 +33,12 @@ Dispatch one subagent to map the territory. It calls `alive:session-history` to 
 - Unsaved stash items from crashed sessions
 
 ```
-╭─ squirrel context rebuild — scouting
+╭─ 🐿️ context rebuild — scouting
 │  Found 5 sessions on this walnut (last 2 weeks)
 │  3 sequential, 2 overlapping (possible conflicts)
 │  12 files touched, 2 bundles active
 │
-│  > Rebuild scope?
+│  ▸ Rebuild scope?
 │  1. All 5 sessions (full rebuild)
 │  2. Last 3 only
 │  3. Just the 2 conflicting sessions
@@ -52,7 +52,7 @@ Based on scope, dispatch parallel subagents — one per session or one per domai
 **Agent assignments:**
 - **Log agent** — reads `_kernel/log.md`, extracts all entries from sessions in scope. Returns decisions, rationale, timestamps.
 - **File agents** (1 per bundle/area touched) — reads the actual files listed in `working:` fields. Returns current state, what changed, any draft versions.
-- **Task agent** — reads `bundles/*/tasks.md`. Returns what's done, what's in progress, what's blocked.
+- **Task agent** — uses `tasks.py list` to query task state. Returns what's done, what's in progress, what's blocked.
 - **People agent** — extracts all person mentions from log entries and stash items. Cross-references with people walnuts if they exist.
 - **Conflict agent** (if overlapping sessions detected) — reads both sessions' log entries and file changes side by side. Identifies contradictions: different decisions on the same topic, competing task states, divergent draft versions.
 
@@ -63,7 +63,7 @@ Each agent returns structured findings. They don't summarise — they return the
 Combine all agent findings into a single reconstructed context:
 
 ```
-╭─ squirrel rebuilt context (5 sessions, 2 conflicts resolved)
+╭─ 🐿️ rebuilt context (5 sessions, 2 conflicts resolved)
 │
 │  Timeline:
 │  +-- 2026-03-10 (session:a8c) — Started competitor research bundle
@@ -76,7 +76,7 @@ Combine all agent findings into a single reconstructed context:
 │
 │  Current state:
 │  Bundle: competitor-research (draft-03)
-│  Key file: bundles/competitor-research/competitor-research-draft-03.md
+│  Key file: competitor-research/competitor-research-draft-03.md
 │
 │  Open tasks (4):
 │  - [ ] Vendor site visits
@@ -89,7 +89,7 @@ Combine all agent findings into a single reconstructed context:
 │  Unresolved conflicts (1):
 │  - Pricing model: per-seat vs usage-based (sessions c7d/d9e)
 │
-│  > How to proceed?
+│  ▸ How to proceed?
 │  1. Accept merged context, resume working
 │  2. Resolve conflicts first
 │  3. Show me the raw findings from each agent
@@ -112,7 +112,7 @@ Two sessions conflict when:
 - Both wrote to the same file (different versions)
 - Both logged decisions on the same topic (contradicting)
 - Both updated the same task (different states)
-- Both modified `_kernel/now.json` with different `next` actions
+- Both modified `_kernel/now.json` with different `next` actions (path: `_kernel/now.json`)
 
 The conflict agent presents each side with evidence and recommends a merge. The human decides.
 

@@ -1,6 +1,6 @@
 ---
 name: alive:system-cleanup
-description: "The world feels messy. Stale drafts, orphan files, overdue tasks, unsaved sessions — entropy is accumulating and needs to be addressed before it compounds. Scans squirrel activity across all walnuts, then surfaces issues one at a time."
+description: "The world feels messy. Stale tasks, orphan folders, v2 remnants, unsaved sessions — entropy is accumulating and needs to be addressed before it compounds. Scans across all walnuts, then surfaces issues one at a time."
 user-invocable: true
 ---
 
@@ -12,14 +12,46 @@ Not a dashboard (that's world). Not a search (that's find). Not session history 
 
 ---
 
+## v3 Architecture Reference
+
+Walnut structure is flat under `_kernel/`:
+
+```
+walnut-name/
+  _kernel/
+    key.md
+    log.md
+    insights.md
+    tasks.json
+    now.json
+    completed.json
+  bundle-a/
+    context.manifest.yaml
+    raw/
+  bundle-b/
+    context.manifest.yaml
+```
+
+There is NO `_kernel/_generated/` subdirectory. There is NO `bundles/` container directory. Bundles sit as direct children of the walnut root alongside `_kernel/`.
+
+Task operations go through `tasks.py`, never by reading/writing task files directly:
+- `tasks.py list --walnut {path}` — all active tasks as JSON
+- `tasks.py list --walnut {path} --status active` — filter by status
+- `tasks.py summary --walnut {path}` — structured summary with counts
+
+Projection rebuilds go through `project.py`:
+- `project.py --walnut {path}` — rebuilds `_kernel/now.json`
+
+---
+
 ## Three-Phase Flow
 
 ```
-Phase 1: Root Audit (system-level, 6 checks — parallel subagents)
-    ↓
+Phase 1: Root Audit (system-level, 7 checks — parallel subagents)
+    |
 Phase 2: Walnut Summary (single subagent scans frontmatter, human picks)
-    ↓
-Phase 3: Deep Audit (one walnut, 10 checks — parallel subagents)
+    |
+Phase 3: Deep Audit (one walnut, 12 checks — parallel subagents)
 ```
 
 ---
@@ -30,11 +62,11 @@ Tidy is read-heavy. Every phase uses subagents to keep the main context clean.
 
 **All subagents MUST use `subagent_type: "Explore"`** — not general-purpose. Explore agents have direct file read access without needing Bash. General-purpose agents attempt Bash for file reads, which is denied when running in the background. This is a hard constraint of Claude Code's permission model.
 
-- **Phase 1:** Dispatch all 6 root checks as parallel subagents. Wait for all. Present results together — one line per passing check, expand on failures only.
+- **Phase 1:** Dispatch all 7 root checks as parallel subagents. Wait for all. Present results together — one line per passing check, expand on failures only.
 - **Phase 2:** Single subagent reads all walnut frontmatter, returns the health table.
-- **Phase 3:** Dispatch all 10 checks as parallel subagents (one check per subagent). Wait for all. Present results together — passing checks collapsed, failures expanded one at a time.
+- **Phase 3:** Dispatch all 12 checks as parallel subagents (one check per subagent). Wait for all. Present results together — passing checks collapsed, failures expanded one at a time.
 
-Each subagent gets: the check description, what to scan, what constitutes a pass/fail, and instructions to return a structured result (pass/fail + details if fail).
+Each subagent gets: the subagent brief (read `.alive/_generated/subagent-brief.md` once, prepend to every agent prompt), the check description, what to scan, what constitutes a pass/fail, and instructions to return a structured result (pass/fail + details if fail). **Without the brief, subagents will not understand walnut/bundle structure, tasks.py, or v3 conventions.**
 
 **Never read walnut files in the main context.** All file reading happens inside subagents. The main context only sees results.
 
@@ -50,7 +82,7 @@ Each subagent gets: the check description, what to scan, what constitutes a pass
 
 ## Phase 1 — Root Audit
 
-Dispatch 6 subagents in parallel. Each checks one thing across the whole world.
+Dispatch 7 subagents in parallel. Each checks one thing across the whole world.
 
 ### 1a. ALIVE Structure
 
@@ -60,17 +92,17 @@ Pass: all 5 exist. Fail: any missing.
 
 ### 1b. Inputs Buffer
 
-Scan `03_Inputs/` for items older than 48 hours. Unrouted inputs may contain decisions or context affecting active walnuts.
+Scan `03_Inbox/` for items older than 48 hours. Unrouted inputs may contain decisions or context affecting active walnuts.
 
 Pass: empty or nothing older than 48h. Fail: items found.
 
 ```
 ╭─ 🐿️ tidy — unrouted inputs
-│  03_Inputs/ has 3 items older than 48 hours:
+│  03_Inbox/ has 3 items older than 48 hours:
 │   - vendor-brochure.pdf (3 days)
 │   - meeting-notes-feb20.md (4 days)
 │
-│  → route via alive:capture-context / skip
+│  ▸ route via alive:capture-context / skip
 ╰─
 ```
 
@@ -85,14 +117,14 @@ Scan ALL walnuts' `_kernel/key.md` frontmatter (`links:` and `parent:` fields) A
 
 ### 1d. Walnut Structural Integrity
 
-Quick scan that every walnut has the full `_kernel/` skeleton:
-- 3 system files: `_kernel/key.md`, `_kernel/log.md`, `_kernel/insights.md`
-- 1 generated file: `_kernel/_generated/now.json`
-- 1 subdirectory: `bundles/`
+Quick scan that every walnut has the full v3 flat `_kernel/` skeleton:
+- 3 narrative files: `_kernel/key.md`, `_kernel/log.md`, `_kernel/insights.md`
+- 2 data files: `_kernel/tasks.json`, `_kernel/now.json`
+- 1 archive file: `_kernel/completed.json`
 
-**Backward compat:** Some walnuts may have system files at the walnut root instead of `_kernel/`. Check `_kernel/` first, fall back to walnut root.
+There is NO `_kernel/_generated/` subdirectory expected. There is NO `bundles/` container directory expected. If either is found, that is a separate check (see 1d does not flag these — checks 3k and 3l handle v2 remnant detection during deep audit).
 
-Pass: all walnuts complete. Fail: list what's missing where.
+Pass: all walnuts have all 6 files in flat `_kernel/`. Fail: list what's missing where.
 
 ### 1e. Unsaved Squirrel Entries
 
@@ -107,7 +139,7 @@ Separate entries with stash (need review) from empty shells (safe to clear).
 │   - glass-cathedral / squirrel:45dcf404 — 6 stash items
 │  13 empty shells (no walnut, no stash) — safe to clear.
 │
-│  → review stellarforge stash / review glass-cathedral stash / clear empty shells / skip
+│  ▸ review stellarforge stash / review glass-cathedral stash / clear empty shells / skip
 ╰─
 ```
 
@@ -126,7 +158,7 @@ Pass: index exists and is recent. Fail: missing or stale — offer to regenerate
 Present all 7 results together. Passing checks get one line. Failures expand.
 
 ```
-╭─ 🐿️ root audit — 6 checks
+╭─ 🐿️ root audit — 7 checks
 │
 │  ✓ 1a. ALIVE structure — intact
 │  ✓ 1b. Inputs buffer — clean
@@ -134,6 +166,7 @@ Present all 7 results together. Passing checks get one line. Failures expand.
 │  ✓ 1d. Walnut integrity — all complete
 │  ⚠ 1e. Unsaved entries — 3 with stash, 13 empty
 │  ⚠ 1f. Orphan files — 2 at root
+│  ✓ 1g. Index — current
 │
 │  3 issues to resolve.
 ╰─
@@ -148,7 +181,7 @@ Then ask which to fix:
 │  2. 3 unsaved sessions with stash (11 items total)
 │  3. 2 orphan files at world root
 │
-│  → which ones? (numbers, "all", or "skip")
+│  ▸ which ones? (numbers, "all", or "skip")
 ╰─
 ```
 
@@ -158,10 +191,10 @@ For each the human picks, propose the specific fix:
 ╭─ 🐿️ proposed fixes
 │
 │  1. Add [[ryn-okata]], [[jax-stellara]] to stellarforge key.md links:
-│  3. Move AGENTS.md → glass-cathedral/bundles/_inbox/raw/,
+│  3. Move AGENTS.md → glass-cathedral/raw/,
 │     delete disaster-recovery-extraction.md
 │
-│  → go / change something / skip
+│  ▸ go / change something / skip
 ╰─
 ```
 
@@ -169,8 +202,8 @@ For each the human picks, propose the specific fix:
 
 ```
 ╭─ 🐿️ root audit complete
-│  6 checks. 3 issues, 2 fixed, 1 skipped.
-│  → continue to walnut audit / done
+│  7 checks. 3 issues, 2 fixed, 1 skipped.
+│  ▸ continue to walnut audit / done
 ╰─
 ```
 
@@ -178,9 +211,7 @@ For each the human picks, propose the specific fix:
 
 ## Phase 2 — Walnut Summary
 
-Single subagent scans all walnuts. For each walnut, read ONLY `_kernel/_generated/now.json` (phase, health, updated) and `_kernel/key.md` frontmatter (rhythm, type). **Frontmatter only. Do not read full files.**
-
-**Backward compat:** If `_kernel/` doesn't exist, check walnut root for system files.
+Single subagent scans all walnuts. For each walnut, read ONLY `_kernel/now.json` (v3 flat path) and `_kernel/key.md` frontmatter (rhythm, type). **Frontmatter only. Do not read full files.**
 
 Return a health table. The main context presents it:
 
@@ -212,15 +243,13 @@ Health thresholds (from rhythm):
 
 ## Phase 3 — Deep Audit (single walnut)
 
-Dispatch 10 subagents in parallel — one per check. Each subagent reads only the files it needs from the walnut's `_kernel/` and `bundles/`. **Do not read the brief pack in the main context.**
+Dispatch 12 subagents in parallel — one per check. Each subagent reads only the files it needs from the walnut's `_kernel/` and its bundle directories. **Do not read the brief pack in the main context.**
 
-**Backward compat:** If `_kernel/` doesn't exist, check walnut root for system files.
-
-The main context receives pass/fail results from all 10 subagents, presents them together, then walks through failures one at a time.
+The main context receives pass/fail results from all 12 subagents, presents them together, then walks through failures one at a time.
 
 ### 3a. Malformed Files (runs first conceptually — other checks depend on frontmatter)
 
-Scan ALL `.md` files in `_kernel/` recursively (system files) and `bundles/` recursively. Check each starts with `---` followed by valid YAML and a closing `---`.
+Scan ALL `.md` files in `_kernel/` and in bundle directories (directories at the walnut root that contain `context.manifest.yaml`). Check each `.md` file starts with `---` followed by valid YAML and a closing `---`.
 
 Pass: all files have frontmatter. Fail: list files without it.
 
@@ -230,9 +259,17 @@ Pass: all files have frontmatter. Fail: list files without it.
 
 ### 3b. Walnut Skeleton
 
-Check the 3 system files exist (`_kernel/key.md`, `_kernel/log.md`, `_kernel/insights.md`), the generated file (`_kernel/_generated/now.json`), and the subdirectory `bundles/`.
+Check that all 6 v3 kernel files exist in the flat `_kernel/` directory:
+- `_kernel/key.md`
+- `_kernel/log.md`
+- `_kernel/insights.md`
+- `_kernel/tasks.json`
+- `_kernel/now.json`
+- `_kernel/completed.json`
 
 Pass: all present. Fail: list what's missing.
+
+If `_kernel/now.json` is missing, suggest running `project.py --walnut {path}` to generate it.
 
 ### 3c. key.md Completeness
 
@@ -246,7 +283,7 @@ Pass: all fields filled, links match body. Fail: list gaps.
 
 ### 3d. now.json Zero-Context
 
-Read `_kernel/_generated/now.json` (full) and `_kernel/log.md` (frontmatter + first ~100 lines). Apply the zero-context test: "If a brand new agent loaded this walnut with no prior context, would it have everything it needs to continue the work?"
+Read `_kernel/now.json` (v3 flat path) and `_kernel/log.md` (frontmatter + first ~100 lines). Apply the zero-context test: "If a brand new agent loaded this walnut with no prior context, would it have everything it needs to continue the work?"
 
 Fail conditions:
 - Context paragraph is empty or just a template comment
@@ -254,14 +291,14 @@ Fail conditions:
 - Context references things not in the log (hallucinated or outdated)
 - `updated:` timestamp is more than 2 weeks old
 
-**Fix guidance:** When the human picks "rewrite now", read the full log (or as much as needed), synthesise recent sessions into a fresh context paragraph, and regenerate now.json. This is the same operation as alive:save's now.json rewrite.
+**Fix guidance:** When the human picks "rewrite now", suggest running `project.py --walnut {path}` to regenerate now.json from current sources. If the log itself is stale, note that project.py will produce a stale projection and suggest a manual log entry first.
 
 ### 3e. now.json next: Validation
 
-Read `_kernel/_generated/now.json` `next:` field and scan `bundles/*/tasks.md` Urgent sections. Check:
+Read `_kernel/now.json` `next:` field. Use `tasks.py list --walnut {path} --priority urgent` to get urgent tasks. Check:
 - `next:` is not empty
 - `next:` is not a template placeholder
-- If any bundle tasks.md has Urgent items, does `next:` align with the top urgent task? Flag conflicts.
+- If any tasks have urgent priority, does `next:` align with the top urgent task? Flag conflicts.
 
 Pass: next is set and doesn't conflict with urgent tasks. Fail: missing, empty, or conflicting.
 
@@ -270,14 +307,14 @@ Pass: next is set and doesn't conflict with urgent tasks. Fail: missing, empty, 
 Read `_kernel/log.md` frontmatter and first ~150 lines. Check:
 - Entries are prepend-ordered (newest at top, dates descending)
 - Recent entries are signed (`signed: squirrel:[session_id]`)
-- `entry-count:` in frontmatter is roughly accurate (within ±5 of actual)
+- `entry-count:` in frontmatter is roughly accurate (within +/-5 of actual)
 - `last-entry:` in frontmatter matches the top entry's date
 
 Pass: ordered, signed, counts match. Fail: list specific issues.
 
 ### 3g. Stale Walnut Past Rhythm
 
-Compare `_kernel/key.md` rhythm against `_kernel/_generated/now.json` updated timestamp using the Phase 2 thresholds.
+Compare `_kernel/key.md` rhythm against `_kernel/now.json` updated timestamp using the Phase 2 thresholds.
 
 Pass: within rhythm. Fail: quiet or waiting.
 
@@ -286,90 +323,139 @@ Pass: within rhythm. Fail: quiet or waiting.
 │  nova-station has been quiet for 18 days (rhythm: weekly)
 │  Last entry: Feb 5 — "locked episode 11 structure"
 │
-│  → open it / archive it / change rhythm / skip
+│  ▸ open it / archive it / change rhythm / skip
 ╰─
 ```
 
 ### 3h. Bundles and Manifests
 
-Scan `bundles/` recursively. Check:
-- **Orphan raw files** — files in `raw/` subdirectories with no corresponding `context.manifest.yaml`
-- **Orphan manifests** — `context.manifest.yaml` files whose raw file is missing (note: research manifests and extracts legitimately have no raw file — only flag if the manifest's `type:` implies a raw source)
-- **Manifest schema** — manifests that exist but are missing required frontmatter fields (`type:`, `description:`, `date:`). A manifest without `description:` is almost as invisible as no manifest.
-
-**Backward compat:** If `bundles/` doesn't exist, fall back to checking `_kernel/_working/` and `_kernel/_references/` instead.
+Scan bundle directories (direct children of walnut root that contain `context.manifest.yaml`). Check:
+- **Orphan raw files** — files in `raw/` subdirectories with no corresponding `context.manifest.yaml` in the parent bundle
+- **Manifest schema** — manifests that exist but are missing required fields (`type:`, `description:`, `date:`). A manifest without `description:` is almost as invisible as no manifest.
 
 Pass: all raw files have manifests, all manifests have required fields. Fail: list gaps.
 
-### 3i. Stale Bundle Drafts and Legacy Naming
+### 3i. Stale Bundle Drafts
 
-Check `bundles/` for bundles in `draft` status older than 30 days.
+Check bundle directories for bundles with `status: draft` in their `context.manifest.yaml` that are older than 30 days (by `date:` field or file modification time).
 
-Also scan the walnut's live context (folders outside `_kernel/`) for legacy naming conventions from pre-walnut systems (e.g. directories using old naming like `_brain/` instead of `_kernel/`, `_core/` instead of `_kernel/`, `_working/`, `_references/`).
-
-Pass: nothing older than 30 days, no legacy naming. Fail: list stale bundles and legacy folders.
+Pass: nothing older than 30 days in draft. Fail: list stale bundles.
 
 ```
 ╭─ 🐿️ tidy — stale draft
-│  bundles/submission-draft/ — 39 days in draft status
-│  → promote to prototype / archive / delete / skip
+│  submission-draft/ — 39 days in draft status
+│  ▸ promote to prototype / archive / delete / skip
 ╰─
 ```
 
-### 3j. Ungraduated Bundles
+### 3j. Completed Bundles Needing Cleanup
 
-Scan `bundles/` for any bundle folder containing a `*-v1.md` or `*-v1.html` file. If found and the bundle is still in `bundles/` (not yet moved to walnut root), surface for graduation.
+Scan bundle directories for bundles whose `context.manifest.yaml` has `status: done` or `status: published`. These bundles have completed their lifecycle and may contain working files, draft iterations, or temporary artefacts that can be cleaned up or archived.
 
-Pass: no v1 files in `bundles/`. Fail: list bundles ready to graduate.
+Check each done/published bundle for:
+- Temporary or working files (e.g., `*-draft-*.md`, `*.tmp`, `*.bak`)
+- Multiple version files where only the final matters (e.g., `proposal-v1.md`, `proposal-v2.md` alongside `proposal-v3.md`)
+- Large raw files that could be archived
+
+Pass: no cleanup candidates found. Fail: list bundles with cleanup opportunities.
 
 ```
-╭─ 🐿️ tidy — graduation ready
-│  bundles/shielding-review/ has shielding-review-v1.md
-│  → graduate to walnut root / skip
+╭─ 🐿️ tidy — completed bundle cleanup
+│  shielding-review/ (status: published) has 3 draft iterations
+│  ▸ archive drafts / delete drafts / skip
 ╰─
 ```
 
-### 3k. Tasks Overdue or Stale
+### 3k. v2 Remnant Detection
 
-Read `bundles/*/tasks.md` across all bundles. Find tasks marked `[ ]` or `[~]`.
+Check for v2 architecture remnants that need migration:
 
-**Primary method:** Check `@session_id` attribution against `.alive/_squirrels/` timestamps. Flag tasks with no progress in 2+ weeks.
+1. **`bundles/` container directory** — In v3, bundles sit as direct children of the walnut root. A `bundles/` directory at the walnut root is a v2 remnant. Suggest moving its contents up one level.
+2. **`_kernel/_generated/` subdirectory** — In v3, `now.json` lives directly in `_kernel/`. A `_generated/` subdirectory inside `_kernel/` is a v2 remnant. Suggest moving `now.json` up and removing the directory.
+3. **`tasks.md` without `tasks.json`** — Scan the walnut recursively for `tasks.md` files. If a `tasks.md` exists in a directory that has no corresponding `tasks.json`, flag it as a v2 remnant needing migration. The `tasks.md` format is no longer read by `tasks.py`.
 
-**Fallback (when timestamps unavailable):** If tasks are tagged `@migrated` or have no attribution, fall back to content-based staleness detection:
-- Scan task text for dates, deadlines, or timeframes ("before Mar 18", "post-launch", "this week")
-- Compare against today's date
-- Flag tasks whose deadlines have passed or are imminent
-
-Also check structural validity:
-- Tasks marked `[x]` still in Urgent/Active sections (should be in Done)
-- `[~]` tasks with no recent session touching them
+Pass: no v2 remnants found. Fail: list each remnant with migration instruction.
 
 ```
-╭─ 🐿️ tidy — stale task
-│  "Send post-launch message to Ryn" — launch ended Feb 28, 6 days ago
-│  → still relevant / remove / reprioritise / blocked (note why) / skip
+╭─ 🐿️ tidy — v2 remnants
+│  bundles/ container directory found — 4 bundles inside
+│  _kernel/_generated/ directory found — contains now.json
+│  2 tasks.md files found without tasks.json counterpart
+│
+│  ▸ migrate all / review individually / skip
+╰─
+```
+
+**Migration instructions per remnant type:**
+- `bundles/` — move each child directory up to walnut root, then remove empty `bundles/`
+- `_kernel/_generated/` — move `now.json` to `_kernel/now.json`, then remove `_generated/`
+- `tasks.md` without `tasks.json` — parse tasks.md and create corresponding tasks.json using `tasks.py add`
+
+### 3l. Orphan Folder Detection
+
+Scan all direct child directories of the walnut root. Flag any directory that:
+- Is NOT `_kernel/`
+- Is NOT `raw/`
+- Does NOT contain a `context.manifest.yaml`
+
+These are orphan folders — they exist in the walnut but have no manifest, so they are invisible to the context system. They may be leftover working directories, unmigrated content, or directories that need a manifest added.
+
+Pass: all non-system child directories have manifests. Fail: list orphan folders.
+
+```
+╭─ 🐿️ tidy — orphan folders
+│  3 folders with no context.manifest.yaml:
+│   - scratch-notes/
+│   - old-research/
+│   - meeting-prep/
+│
+│  ▸ add manifests / archive / delete / skip
+╰─
+```
+
+### 3m. Stale Tasks via tasks.py
+
+Use `tasks.py list --walnut {path} --status active` to get all active tasks as structured JSON. Each task includes a `created` date field.
+
+**Stale task detection:** Filter tasks where `created` date is more than 14 days ago and status is still `active` or `todo`. These tasks may be stuck, forgotten, or no longer relevant.
+
+Also check:
+- Tasks with `status: blocked` that have no recent log entries mentioning them
+- Tasks with a `due` date that has passed
+
+```
+╭─ 🐿️ tidy — stale tasks
+│  3 tasks older than 14 days with no progress:
+│   - t012: "Send post-launch message to Ryn" (created 2026-03-10)
+│   - t015: "Review shielding spec" (created 2026-03-05, due: 2026-03-20 — OVERDUE)
+│   - t018: "Update API docs" (created 2026-03-01)
+│
+│  ▸ still relevant / remove / reprioritise / blocked (note why) / skip
 ╰─
 ```
 
 ### Phase 3 Results
 
-Present all 10 results together. Passing checks collapsed, failures listed.
+Present all 12 results together. Passing checks collapsed, failures listed.
 
 ```
-╭─ 🐿️ stellarforge audit — 10 checks
+╭─ 🐿️ stellarforge audit — 12 checks
 │
 │  ✓ 3a. malformed files       — all 34 .md files have frontmatter
-│  ✓ 3b. walnut skeleton       — complete
+│  ✓ 3b. walnut skeleton       — complete (6/6 kernel files)
 │  ⚠ 3c. key.md completeness   — links: [] but body references 4 people
 │  ✓ 3d. now.json zero-context — pass
 │  ✓ 3e. now.json next:        — set, aligns with tasks
 │  ✓ 3f. log health            — ordered, signed, counts match
 │  ✓ 3g. stale rhythm          — active
 │  ✓ 3h. bundles               — all manifests valid
-│  ⚠ 3i. stale drafts          — 1 legacy pre-walnut folder found
-│  ⚠ 3j. stale tasks           — 3 past-deadline tasks found
+│  ✓ 3i. stale drafts          — none
+│  ✓ 3j. completed bundles     — clean
+│  ⚠ 3k. v2 remnants           — bundles/ container found, 1 tasks.md without tasks.json
+│  ⚠ 3l. orphan folders        — 2 folders without manifests
+│  ⚠ 3m. stale tasks           — 3 tasks older than 14 days
 │
-│  3 issues to resolve.
+│  4 issues to resolve.
 ╰─
 ```
 
@@ -379,10 +465,11 @@ Ask which to fix:
 ╭─ 🐿️ stellarforge — which to fix?
 │
 │  1. key.md links: [] but body references 4 person walnuts
-│  2. 3 live context folders using pre-walnut naming conventions
-│  3. 3 tasks with passed or imminent deadlines
+│  2. bundles/ container + 1 tasks.md needing migration
+│  3. 2 orphan folders without manifests
+│  4. 3 stale tasks older than 14 days
 │
-│  → which ones? (numbers, "all", or "skip")
+│  ▸ which ones? (numbers, "all", or "skip")
 ╰─
 ```
 
@@ -393,10 +480,11 @@ For each the human picks, propose the specific fix:
 │
 │  1. Add [[ryn-okata]], [[jax-stellara]], [[mira-solaris]],
 │     [[orion-vex]] to stellarforge `_kernel/key.md` frontmatter links: field
-│  3. Move "Send post-launch message" to Urgent, flag "Ryn record Part 2
-│     narration" as 12 days to deadline
+│  2. Move 4 bundle directories from bundles/ to walnut root,
+│     migrate tasks.md in submission-draft/ to tasks.json
+│  3. Add context.manifest.yaml to scratch-notes/ and old-research/
 │
-│  → go / change something / skip
+│  ▸ go / change something / skip
 ╰─
 ```
 
@@ -406,10 +494,11 @@ For each the human picks, propose the specific fix:
 ╭─ 🐿️ stellarforge — fixes applied
 │
 │  ✓ `_kernel/key.md` links updated — 4 person walnuts added
-│  ✓ tasks reprioritised — 1 moved to Urgent, 1 flagged
-│  ✗ legacy folders — skipped
+│  ✓ bundles/ migrated — 4 directories moved, tasks.md converted
+│  ✓ manifests added — 2 orphan folders now have context.manifest.yaml
+│  ✗ stale tasks — skipped
 │
-│  → audit another walnut / done
+│  ▸ audit another walnut / done
 ╰─
 ```
 
@@ -423,10 +512,10 @@ If "done" — Final Summary.
 ```
 ╭─ 🐿️ tidy complete
 │
-│  Root: 6 checks, 3 issues, 2 resolved
-│  stellarforge: 10 checks, 3 issues, 2 resolved
+│  Root: 7 checks, 3 issues, 2 resolved
+│  stellarforge: 12 checks, 4 issues, 3 resolved
 │
-│  7 resolved, 2 skipped. World is healthy.
+│  9 resolved, 2 skipped. World is healthy.
 ╰─
 ```
 

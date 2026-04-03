@@ -1,6 +1,6 @@
 ---
 name: alive:load-context
-description: "The human mentions a walnut to work on, asks about a specific venture/experiment/project, or wants to check status — not just explicit 'load X'. Load the brief pack, resolve the people involved, check the active bundle — then surface one observation and ask what to work on. Context loads in tiers: walnut and people are automatic, bundle depth is offered."
+description: "The human mentions a walnut to work on, asks about a specific venture/experiment/project, or wants to check status — not just explicit 'load X'. Load the brief pack (3 files), resolve the people involved, check the active bundle — then surface one observation and ask what to work on. Context loads in tiers: walnut and people are automatic, bundle depth is offered."
 user-invocable: true
 ---
 
@@ -37,29 +37,37 @@ Show available walnuts as a numbered list grouped by domain:
 
 ---
 
-## Tier 1 — Walnut Brief Pack (automatic)
+## Tier 1 — Brief Pack (3 files)
 
-Read in order (show `▸` reads):
+Read these three files. That's it — everything you need to orient.
 
-1. `_kernel/key.md` — what this walnut is (identity, people list, links, rhythm)
-2. `_kernel/_generated/now.json` — where it is right now (phase, active bundle, next action)
-3. `_kernel/insights.md` — frontmatter scan (what domain knowledge sections exist)
-4. `bundles/*/tasks.md` — current task queues per bundle
-5. `.alive/_squirrels/` — any unsaved entries with stash for this walnut?
-6. `bundles/*/context.manifest.yaml` — **frontmatter only** (scan what bundles exist, their status and goal — don't read full manifests yet)
+1. `_kernel/key.md` — full file (identity, people, links, rhythm)
+2. `_kernel/now.json` — full file (phase, next action, bundle statuses with task summaries, recent sessions, nested walnut state, blockers, context paragraph)
+3. `_kernel/insights.md` — frontmatter only (what domain knowledge sections exist)
 
-**Backward compat:** Check `_kernel/` first for system files, fall back to walnut root. If `bundles/` doesn't exist, fall back to scanning `_kernel/_working/` and `_kernel/_references/` instead.
+**DO NOT read any other files at this stage.** No log.md. No bundle manifests. No tasks files. No squirrel entries. All of that data is already in now.json — the projection script aggregated it. Reading source files at load wastes context window on data you already have.
 
-**Update squirrel YAML immediately:** Find the current session's YAML in `.alive/_squirrels/` (most recently created file, or match `WALNUT_SESSION_ID` env var). Set `walnut:` to the loaded walnut name.
+Show `>` reads as you go:
 
 ```
-▸ _kernel/key.md           Nova Station — orbital tourism, weekly rhythm, 3 people
-▸ _kernel/_generated/now.json  Phase: testing. Bundle: shielding-review. Next: review telemetry.
-▸ _kernel/insights.md      3 sections (engineering, regulatory, partners)
-▸ bundles/*/tasks.md        2 active, 1 urgent, 4 to do
-▸ .alive/_squirrels/        1 unsaved entry (empty — safe to clear)
-▸ bundles/                  3 bundles (shielding-review: draft, launch-checklist: prototype, safety-brief: done)
+> _kernel/key.md           Lock-in Lab — launching, weekly rhythm, 3 people
+> _kernel/now.json          Phase: launching. Bundle: official-launch. Next: Draft PCM essay.
+                            Active bundles: 2 (official-launch: 1 urgent, 18 todo; research: 4 todo)
+                            Blockers: none. Recent: 3 sessions.
+> _kernel/insights.md       4 domain knowledge sections
 ```
+
+**Backward compat:** Check `_kernel/now.json` first. If not found, fall back to `_kernel/_generated/now.json` (v2 path). If the v2 format is found (no `bundles` or `tasks` data in the JSON), note that deeper file reads may be needed for full context — the v2 now.json doesn't carry bundle/task summaries.
+
+### Displaying now.json
+
+Extract and display from now.json's structure:
+
+- **Phase** and **next action** — `next` is an object with `action`, `bundle`, and `why` fields
+- **Active bundles** — each bundle entry has task counts and flags for urgent items
+- **Blockers** — surface any, or say "none"
+- **Recent sessions** — count and brief summary
+- **Nested walnuts** — from the `children` field, show any child walnut state worth noting
 
 ---
 
@@ -68,9 +76,9 @@ Read in order (show `▸` reads):
 After loading the brief pack, resolve `key.md` `people:` to person walnuts. For each person listed, read their person walnut's `_kernel/key.md` **frontmatter only** — name, role, tags, last updated, rhythm. This is lightweight (3-5 small reads) and always happens.
 
 ```
-▸ people/ryn-okata/key.md       engineering lead, updated 2 days ago
-▸ people/jax-stellara/key.md    vendor contact, updated 22 days ago ⚠
-▸ people/orion-vex/key.md     systems architect, updated 5 days ago
+> people/ryn-okata/key.md       engineering lead, updated 2 days ago
+> people/jax-stellara/key.md    vendor contact, updated 22 days ago !
+> people/orion-vex/key.md     systems architect, updated 5 days ago
 ```
 
 **If any person has relevant recent activity** — a dispatch routed from another session, a stash note tagged to this walnut, or staleness worth flagging — surface it:
@@ -79,7 +87,7 @@ After loading the brief pack, resolve `key.md` `people:` to person walnuts. For 
 ╭─ 🐿️ people
 │  Ryn Okata — engineering lead, updated 2 days ago
 │    Dispatch from [[heavy-revive]]: "prefers async comms"
-│  Jax Stellara — vendor contact, 22 days ago ⚠
+│  Jax Stellara — vendor contact, 22 days ago !
 │    Last interaction was pre-testing phase — context may be stale
 │  Orion Vex — systems architect, updated 5 days ago
 │    3 stash items routed here from session c2f8e7f2
@@ -97,9 +105,9 @@ After loading the brief pack, resolve `key.md` `people:` to person walnuts. For 
 
 ---
 
-## Tier 3 — Active Bundle (offered)
+## Tier 3 — Bundle Deep-Load (on demand)
 
-If `now.json` has a `bundle:` field pointing to an active bundle, offer to deep-load it. This reads the bundle's context.manifest.yaml body (not just frontmatter), tasks, changelog, and work log.
+If `now.json` has a `bundle:` field pointing to an active bundle, offer to deep-load it. The brief pack already told you the bundle name, status, task counts, and urgency — this tier gives you the full working context.
 
 ```
 ╭─ 🐿️ active bundle: shielding-review
@@ -109,17 +117,17 @@ If `now.json` has a `bundle:` field pointing to an active bundle, offer to deep-
 │  3 tasks open, 1 in progress
 │
 │  ▸ Load bundle context?
-│  1. Deep load (manifest + tasks + work log)
+│  1. Deep load (manifest + live tasks)
 │  2. Just the summary above
 │  3. Switch to a different bundle
 ╰─
 ```
 
-If the human picks "deep load" — read the full context.manifest.yaml body, which includes:
-- `## Context` — what the bundle is about
-- `## Tasks` — bundle-scoped work items
-- `## Changelog` — version history
-- `## Work Log` — what happened in previous sessions
+**Deep load reads:**
+
+1. **`bundles/{name}/context.manifest.yaml`** — full file (context, changelog, work log, session history)
+2. **`tasks.py list --walnut {path} --bundle {name}`** — call the script for the detailed task view. Do NOT read `tasks.json` directly; the script is the interface.
+3. **Write `active_sessions:` entry** to the bundle's `context.manifest.yaml` — claim this session so other agents know you're here.
 
 If `active_sessions:` shows another agent is working on this bundle, warn:
 
@@ -136,10 +144,12 @@ If `active_sessions:` shows another agent is working on this bundle, warn:
 
 One observation before asking what to work on. Fires after the load sequence, grounded in the context just loaded.
 
+The brief pack gives you everything: phase, bundles, tasks, blockers, recent sessions, nested walnuts. Find something worth noticing — a blocker that's been sitting, a bundle with no recent sessions, a next action that's overdue, a pattern across task counts.
+
 ```
 ╭─ 🐿️ spotted
-│  Ryn hasn't been mentioned in 8 days but there are 2 telemetry
-│  reports from her team sitting in email. Might be test results.
+│  The official-launch bundle has 1 urgent task but no sessions
+│  in 4 days. The PCM essay draft might be blocking everything else.
 ╰─
 ```
 
@@ -162,27 +172,13 @@ After the Spotted observation, prompt with bundle awareness:
 │  1. Continue from next (review telemetry)
 │  2. Continue bundle (shielding-review)
 │  3. Start something new (creates bundle)
-│  4. Load full context (log entries, linked walnuts)
+│  4. Go deeper (log history, linked walnuts, full insights)
 │  5. Just chat
 ```
 
-If the human picks "start something new" → invoke `alive:bundle` (create operation).
+If the human picks "start something new" -> invoke `alive:bundle` (create operation).
 
 If no active bundle exists, show options 1, 3, 4, 5 only (skip option 2).
-
-**Graduation check:** When scanning `bundles/` context.manifest.yaml frontmatter (Tier 1), also check for files matching `*-v1.md` in any bundle folder. If found and the bundle is still in `bundles/`:
-
-```
-╭─ 🐿️ graduation ready
-│  shielding-review has a v1. Graduate to walnut root?
-│
-│  ▸ Graduate?
-│  1. Yes — move to walnut root
-│  2. Not yet
-╰─
-```
-
-If yes → invoke `alive:bundle` (graduate operation).
 
 ---
 
@@ -214,7 +210,7 @@ If the Bundle Prompt section is used, skip this. This section remains for backwa
 - Stash in conversation (see squirrels.md). No file writes except capture + bundle work.
 - Always watching: people updates, bundle progress, capturable content.
 - People frontmatter is already loaded — use it. If someone mentioned matches a loaded person, connect the dots.
-- When a bundle reaches prototype → offer to promote to published.
+- When a bundle reaches prototype -> offer to promote to published.
 
 ---
 
@@ -235,28 +231,11 @@ If another walnut becomes relevant during work ("this references [[glass-cathedr
 
 ---
 
-## Unsigned Entry Recovery
-
-If `.alive/_squirrels/` has an unsaved entry with stash items from a previous session:
-
-```
-╭─ 🐿️ previous session had 6 stash items that were never saved.
-│
-│  ▸ Review before we start?
-│  1. Yeah, show me
-│  2. Clear and move on
-╰─
-```
-
-If yes: present the previous stash for routing. If no: clear and move on.
-
----
-
 ## Multi-Walnut Loading
 
 The default is single-walnut focus. But `alive:load-context walnut-a walnut-b` is valid for cross-walnut sessions:
 
 - **First walnut** = primary. Full brief pack + people + bundle offer.
-- **Additional walnuts** = secondary. Frontmatter only (key.md + now.json frontmatter). Enough to reference, not enough to distract.
+- **Additional walnuts** = secondary. Read `_kernel/key.md` frontmatter + `_kernel/now.json` only. Enough to reference, not enough to distract.
 
 This is rare. Most cross-walnut context comes naturally from the people tier (Tier 2) — loading a venture automatically gives you lightweight context on everyone involved.

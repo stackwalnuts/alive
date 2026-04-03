@@ -168,7 +168,7 @@ def main():
     inputs_node = {
         'id': 'inputs', 'label': f"{stats['inputs']} inputs",
         'domain': 'inputs', 'type': 'buffer',
-        'goal': f"{stats['inputs']} unrouted items in 03_Inputs/",
+        'goal': f"{stats['inputs']} unrouted items in 03_Inbox/",
         'phase': 'buffer', 'size': 14, 'special': True, 'isPerson': False,
     }
 

@@ -66,7 +66,7 @@ esac
 
 # Block: anything in the Alive plugin cache
 case "$FILE_PATH" in
-  */.claude/plugins/cache/stackwalnuts/alive/*)
+  */.claude/plugins/cache/alivecontext/alive/*)
     echo "$DENY_MSG"
     exit 0
     ;;
