@@ -51,7 +51,7 @@ const d=JSON.parse(require('fs').readFileSync(0,'utf8'));
 # Read JSON input from stdin. Must be called BEFORE any other stdin read.
 # Sets: HOOK_INPUT, HOOK_SESSION_ID, HOOK_CWD, HOOK_EVENT
 read_hook_input() {
-  HOOK_INPUT=$(cat /dev/stdin 2>/dev/null || echo '{}')
+  HOOK_INPUT=$(cat 2>/dev/null || echo '{}')
   local parsed
   parsed=$(_json_multi "$HOOK_INPUT" "session_id cwd hook_event_name")
   HOOK_SESSION_ID=$(echo "$parsed" | sed -n '1p')
