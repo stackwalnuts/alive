@@ -164,13 +164,158 @@ def safe_tar_create(source_dir, output_path, strip_prefix=None):
                         )
 
 
+# LD22 caps. Member count cap is high enough for the largest realistic walnut
+# (~5000 files in our worst-case fixture) but low enough to bound memory use
+# when validating a hostile tar.
+_LD22_MAX_MEMBERS = 10000
+_LD22_MAX_TOTAL_BYTES = 500 * 1024 * 1024  # 500 MB
+
+# Tar metadata member types that don't write filesystem entries: PAX headers
+# and GNU longname/longlink. Tolerated and skipped during pre-validation.
+_LD22_METADATA_TYPES = frozenset(
+    t for t in (
+        getattr(tarfile, "XHDTYPE", None),
+        getattr(tarfile, "XGLTYPE", None),
+        getattr(tarfile, "GNUTYPE_LONGNAME", None),
+        getattr(tarfile, "GNUTYPE_LONGLINK", None),
+    )
+    if t is not None
+)
+
+
+def _ld22_validate_members(members, dest_abs):
+    # type: (List[tarfile.TarInfo], str) -> None
+    """Pre-validate every tar member per LD22. Raises ValueError on any
+    rejection. Performs no filesystem writes.
+
+    Rules (in order):
+        - Member count cap (10000)
+        - Skip PAX / GNU long-name metadata members
+        - Reject symlinks and hardlinks outright (any target)
+        - Reject device / fifo / block members
+        - Allowlist regular files and directories only
+        - Cap cumulative regular file size (500 MB)
+        - Reject backslashes in member names
+        - Normalize ``./`` prefix and reject empty / pure-slash names
+        - Reject ``..`` segments and intermediate ``.`` segments
+        - Reject absolute POSIX paths and Windows drive letters
+        - Reject duplicate effective member paths
+        - Reject post-normalisation paths that escape ``dest_abs``
+    """
+    if len(members) > _LD22_MAX_MEMBERS:
+        raise ValueError(
+            "Tar has {0} members; cap is {1}".format(
+                len(members), _LD22_MAX_MEMBERS
+            )
+        )
+
+    total = 0
+    seen_effective = set()  # type: Set[str]
+
+    for m in members:
+        # Skip PAX / GNU long-name metadata members; they don't materialise
+        # as filesystem entries.
+        if m.type in _LD22_METADATA_TYPES:
+            continue
+
+        # Reject filesystem-writing dangerous types outright (LD22 v10).
+        if m.issym() or m.islnk():
+            raise ValueError(
+                "Symlink/hardlink not allowed: {0!r}".format(m.name)
+            )
+        if m.ischr() or m.isblk() or m.isfifo():
+            raise ValueError(
+                "Device or fifo member: {0!r}".format(m.name)
+            )
+
+        # Allowlist: only regular files and directories from here on (LD22 v13).
+        if not (m.isfile() or m.isdir()):
+            raise ValueError(
+                "Unsupported tar member type for {0!r}".format(m.name)
+            )
+
+        if m.isfile():
+            total += m.size
+            if total > _LD22_MAX_TOTAL_BYTES:
+                raise ValueError(
+                    "Tar expands to > {0} bytes".format(_LD22_MAX_TOTAL_BYTES)
+                )
+
+        # Reject backslashes (LD22 v12).
+        if "\\" in m.name:
+            raise ValueError(
+                "Backslash in member name: {0!r}".format(m.name)
+            )
+
+        # Normalize: strip leading ``./`` (legitimate tar convention).
+        normalized = m.name
+        while normalized.startswith("./"):
+            normalized = normalized[2:]
+        if not normalized or normalized.strip("/") == "":
+            raise ValueError(
+                "Empty or invalid member name: {0!r}".format(m.name)
+            )
+
+        # Reject ``..`` segments and intermediate ``.`` segments (LD22 v12).
+        parts = normalized.split("/")
+        for part in parts:
+            if part == "..":
+                raise ValueError(
+                    "Parent-dir segment: {0!r}".format(m.name)
+                )
+            if part == ".":
+                raise ValueError(
+                    "Intermediate dot-segment: {0!r}".format(m.name)
+                )
+
+        # Reject absolute POSIX paths and Windows drive letters (LD22 v9).
+        if normalized.startswith("/") or (
+            len(normalized) >= 2
+            and normalized[1] == ":"
+            and normalized[0].isalpha()
+        ):
+            raise ValueError(
+                "Absolute path member: {0!r}".format(m.name)
+            )
+
+        # Reject duplicate effective member paths (LD22 v12).
+        # Normalise trailing slashes so ``foo`` and ``foo/`` collide.
+        effective = normalized.rstrip("/")
+        if effective in seen_effective:
+            raise ValueError(
+                "Duplicate effective member path: {0!r}".format(m.name)
+            )
+        seen_effective.add(effective)
+
+        # Final defence: post-normalisation join must stay inside dest.
+        joined = os.path.normpath(os.path.join(dest_abs, normalized))
+        if not (joined == dest_abs or joined.startswith(dest_abs + os.sep)):
+            raise ValueError(
+                "Path traversal member: {0!r}".format(m.name)
+            )
+
+
 def safe_tar_extract(archive_path, output_dir):
     # type: (str, str) -> None
-    """Extract a tar.gz archive with path-traversal and symlink protection.
+    """Extract a tar.gz archive with LD22 pre-validation safety.
 
-    - Rejects entries with ``../`` or absolute paths (Zip Slip).
-    - Rejects symlinks pointing outside *output_dir*.
-    - Extracts to a staging directory first, then moves into *output_dir*.
+    Pre-validates ALL members before any extraction. Zero filesystem writes
+    on rejection. Implements the LD22 acceptance contract:
+
+    - Rejects path traversal (``../``)
+    - Rejects absolute POSIX paths and Windows drive letters
+    - Rejects ANY symlink or hardlink member outright
+    - Rejects device / fifo / block members
+    - Rejects member types other than regular file or directory
+    - Rejects backslashes in member names
+    - Rejects duplicate effective member paths (e.g. ``foo`` + ``./foo``)
+    - Rejects ``..`` and intermediate ``.`` path segments
+    - Caps cumulative file size at 500 MB
+    - Caps member count at 10000
+    - Tolerates PAX header and GNU long-name metadata members (skipped)
+
+    Extraction goes through an inner staging dir on the same filesystem so
+    a mid-extract failure leaves ``output_dir`` empty.
     """
     archive_path = os.path.abspath(archive_path)
     output_dir = os.path.abspath(output_dir)
@@ -180,7 +325,8 @@ def safe_tar_extract(archive_path, output_dir):
 
     os.makedirs(output_dir, exist_ok=True)
 
-    # Use a staging directory in the same parent (same filesystem for rename)
+    # Inner staging dir on the same filesystem so the post-validate move is a
+    # cheap rename. The staging dir is always cleaned up in ``finally``.
     parent = os.path.dirname(output_dir)
     staging = tempfile.mkdtemp(dir=parent, prefix=".p2p-extract-")
 
@@ -194,51 +340,30 @@ def safe_tar_extract(archive_path, output_dir):
                 )
             )
         with tar:
-            # First pass: validate every entry
             try:
                 members = tar.getmembers()
             except (tarfile.TarError, EOFError) as exc:
                 raise ValueError(
                     "Corrupt tar archive at {0}: {1}".format(archive_path, exc)
                 )
-            for member in members:
-                # Reject absolute paths
-                if os.path.isabs(member.name):
-                    raise ValueError(
-                        "Absolute path in archive: {0}".format(member.name)
-                    )
 
-                # Reject path traversal
-                resolved = _resolve_path(staging, member.name)
-                if resolved is None:
-                    raise ValueError(
-                        "Path traversal in archive: {0}".format(member.name)
-                    )
+            # LD22 pre-validation: zero writes on any rejection.
+            _ld22_validate_members(members, staging)
 
-                # Reject symlinks that escape output
-                if member.issym() or member.islnk():
-                    link_target = member.linkname
-                    # For symlinks, resolve relative to the member's parent
-                    member_parent = os.path.join(
-                        staging, os.path.dirname(member.name)
-                    )
-                    if os.path.isabs(link_target):
-                        link_resolved = link_target
-                    else:
-                        link_resolved = os.path.normpath(
-                            os.path.join(member_parent, link_target)
-                        )
-                    if not (link_resolved == staging
-                            or link_resolved.startswith(staging + os.sep)):
-                        raise ValueError(
-                            "Symlink escapes output: {0} -> {1}".format(
-                                member.name, member.linkname
-                            )
-                        )
-
-            # Second pass: extract (rewind)
+            # All members passed pre-validation. Now extract.
+            # Python 3.12+ supports extractall(filter='data'); use it as
+            # additional defence-in-depth when available.
+            import inspect
             try:
-                tar.extractall(path=staging)
+                sig = inspect.signature(tar.extractall)
+                supports_filter = "filter" in sig.parameters
+            except (TypeError, ValueError):
+                supports_filter = False
+            try:
+                if supports_filter:
+                    tar.extractall(path=staging, filter="data")
+                else:
+                    tar.extractall(path=staging)
             except (tarfile.TarError, EOFError) as exc:
                 raise ValueError(
                     "Corrupt tar archive at {0}: {1}".format(
@@ -246,12 +371,11 @@ def safe_tar_extract(archive_path, output_dir):
                     )
                 )
 
-        # Move contents from staging into output_dir
+        # Move contents from inner staging into output_dir.
         for item in os.listdir(staging):
             src = os.path.join(staging, item)
             dst = os.path.join(output_dir, item)
             if os.path.exists(dst):
-                # Remove existing to allow overwrite
                 if os.path.isdir(dst):
                     shutil.rmtree(dst)
                 else:
@@ -259,9 +383,13 @@ def safe_tar_extract(archive_path, output_dir):
             os.replace(src, dst)
 
     finally:
-        # Clean up staging directory
         if os.path.isdir(staging):
             shutil.rmtree(staging, ignore_errors=True)
+
+
+# Public LD22 alias used by docstrings and external callers. Identical
+# behaviour to ``safe_tar_extract``; the alias matches the LD22 spec name.
+safe_extractall = safe_tar_extract
 
 
 def tar_list_entries(archive_path):
