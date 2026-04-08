@@ -50,7 +50,7 @@ case "$FILE_PATH" in
             MARKER_MTIME=$(stat -f %m "$MARKER" 2>/dev/null || echo "0")
           fi
           AGE=$(( $(date +%s) - MARKER_MTIME ))
-          [ "$AGE" -lt 300 ] && break
+          [ "$AGE" -lt 300 ] && exit 0
         fi
         touch "$MARKER"
         # Background -- don't block the session
