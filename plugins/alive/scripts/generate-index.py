@@ -460,6 +460,79 @@ def main():
         world_sq_count = len([f for f in os.listdir(world_sq_dir)
                               if f.endswith('.yaml')])
 
+    # ─── Recent sessions + unsigned stash count ───
+    recent_sessions = []
+    unsigned_with_stash = 0
+    if os.path.isdir(world_sq_dir):
+        sq_files = [f for f in os.listdir(world_sq_dir) if f.endswith('.yaml')]
+        sq_files.sort(
+            key=lambda f: os.path.getmtime(os.path.join(world_sq_dir, f)),
+            reverse=True
+        )
+
+        def extract_sq_field(content, field):
+            """Extract a field value from squirrel YAML via regex."""
+            m = re.search(r'^' + re.escape(field) + r'\s*:\s*(.*)', content, re.MULTILINE)
+            if not m:
+                return ''
+            val = m.group(1).strip()
+            if len(val) >= 2 and ((val[0] == '"' and val[-1] == '"') or
+                                   (val[0] == "'" and val[-1] == "'")):
+                val = val[1:-1]
+            return val
+
+        for sq_file in sq_files:
+            sq_path = os.path.join(world_sq_dir, sq_file)
+            try:
+                with open(sq_path, 'r', encoding='utf-8') as sf:
+                    sq_content = sf.read()
+            except (IOError, UnicodeDecodeError):
+                continue
+
+            saves_str = extract_sq_field(sq_content, 'saves')
+            saves_val = 0
+            try:
+                saves_val = int(saves_str)
+            except (ValueError, TypeError):
+                pass
+
+            has_empty_stash = bool(re.search(r'^stash\s*:\s*\[\s*\]\s*$', sq_content, re.MULTILINE))
+            has_stash_key = bool(re.search(r'^stash\s*:', sq_content, re.MULTILINE))
+            if saves_val == 0 and has_stash_key and not has_empty_stash:
+                stash_m = re.search(r'^stash\s*:.*\n(\s+-\s)', sq_content, re.MULTILINE)
+                if stash_m:
+                    unsigned_with_stash += 1
+
+            if len(recent_sessions) < 10:
+                session_id = extract_sq_field(sq_content, 'session_id')
+                walnut_name = extract_sq_field(sq_content, 'walnut')
+                started = extract_sq_field(sq_content, 'started')
+                recovery = extract_sq_field(sq_content, 'recovery_state')
+                bundle = extract_sq_field(sq_content, 'bundle')
+                tags_raw = extract_sq_field(sq_content, 'tags')
+
+                date = ''
+                if started:
+                    date_m = re.match(r'(\d{4}-\d{2}-\d{2})', started)
+                    if date_m:
+                        date = date_m.group(1)
+
+                tags_list = parse_inline_list(tags_raw)
+
+                entry = {
+                    'squirrel': session_id[:8] if session_id else sq_file[:8],
+                    'walnut': walnut_name if walnut_name and walnut_name != 'null' else '',
+                    'date': date,
+                    'saves': saves_val,
+                    'summary': recovery,
+                }
+                if bundle:
+                    entry['bundle'] = bundle
+                if tags_list:
+                    entry['tags'] = tags_list
+
+                recent_sessions.append(entry)
+
     # Inputs count
     inputs_dir = os.path.join(world_root, '03_Inbox')
     input_count = 0
@@ -541,6 +614,25 @@ def main():
         lines.append(f'    path: {yaml_escape(p["path"])}')
         lines.append(f'    updated: {yaml_escape(p["updated"] or "unknown")}')
 
+    lines.append('')
+    lines.append('recent_sessions:')
+    if recent_sessions:
+        for rs in recent_sessions:
+            lines.append(f'  - squirrel: {yaml_escape(rs.get("squirrel", ""))}')
+            lines.append(f'    walnut: {yaml_escape(rs.get("walnut", ""))}')
+            lines.append(f'    date: {yaml_escape(rs.get("date", ""))}')
+            if rs.get('bundle'):
+                lines.append(f'    bundle: {yaml_escape(rs["bundle"])}')
+            lines.append(f'    saves: {rs.get("saves", 0)}')
+            if rs.get('summary'):
+                lines.append(f'    summary: {yaml_escape(rs["summary"])}')
+            if rs.get('tags'):
+                tags_str = ', '.join(rs['tags'])
+                lines.append(f'    tags: [{tags_str}]')
+    else:
+        lines.append('  # no recent sessions')
+    lines.append(f'unsigned_with_stash: {unsigned_with_stash}')
+
     output = '\n'.join(lines) + '\n'
 
     os.makedirs(alive_dir, exist_ok=True)
@@ -553,6 +645,11 @@ def main():
         return {k: v for k, v in entry.items()
                 if v and v != [] and v != 0 and v != False}
 
+    def clean_session(entry):
+        """Clean session entry but preserve saves: 0 since it's meaningful."""
+        return {k: v for k, v in entry.items()
+                if k == 'saves' or (v and v != [] and v is not False)}
+
     json_data = {
         'generated': timestamp,
         'stats': {
@@ -561,9 +658,11 @@ def main():
             'capsules': total_capsules,
             'sessions': world_sq_count,
             'inputs': input_count,
+            'unsigned_with_stash': unsigned_with_stash,
         },
         'walnuts': [clean(w) for w in walnuts],
         'people': [clean(p) for p in people],
+        'recent_sessions': [clean_session(rs) for rs in recent_sessions],
     }
     with open(json_file, 'w', encoding='utf-8') as f:
         json.dump(json_data, f, indent=2, default=str)
