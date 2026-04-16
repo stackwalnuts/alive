@@ -906,6 +906,18 @@ def build_server() -> FastMCP[AppContext]:
     server._mcp_server.version = __version__
 
     _install_capability_override(server)
+
+    # Register tool surface. Each tool module exposes a ``register``
+    # callable that attaches its tools to the server via the FastMCP
+    # ``tool`` decorator. Done after capability install so the
+    # ``tools.listChanged=False`` flag is already committed -- the
+    # roster frozen here is the roster advertised on initialize.
+    # Import locally to keep the server module's import graph narrow
+    # (tools pull in envelope + errors + paths + vendored helpers).
+    from alive_mcp.tools import walnut as _walnut_tools  # noqa: E402
+
+    _walnut_tools.register(server)
+
     return server
 
 
