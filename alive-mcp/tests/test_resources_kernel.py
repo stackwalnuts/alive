@@ -311,12 +311,13 @@ class KernelResourceReadTests(unittest.TestCase):
         self.assertIn("The log body.", content.text)
 
     def test_read_now_returns_json_content(self) -> None:
-        """``now`` URI returns the raw JSON text, not a parsed dict.
+        """``now`` URI returns the ``_kernel/now.json`` contents as text.
 
-        Matches the task acceptance: "alive://walnut/04_Ventures/alive/
-        kernel/now returns parsed _kernel/now.json + MIME
-        application/json". Resource reads always return text; the MIME
-        tells the client how to parse it.
+        Matches the task acceptance: ``alive://walnut/04_Ventures/alive/
+        kernel/now`` returns the ``_kernel/now.json`` contents (JSON
+        text) + MIME ``application/json``. Resource reads always
+        deliver text on the wire; the MIME tells the client how to
+        parse it.
         """
         uri = encode_kernel_uri("04_Ventures/alive", "now")
 

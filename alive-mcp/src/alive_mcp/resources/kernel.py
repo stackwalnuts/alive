@@ -130,6 +130,30 @@ from alive_mcp.uri import (
 logger = logging.getLogger("alive_mcp.resources.kernel")
 
 
+# ---------------------------------------------------------------------------
+# Cross-module integration seams.
+#
+# These are the three functions in ``alive_mcp.tools.walnut`` that the
+# resource layer relies on -- walnut inventory, kernel-file containment,
+# and v3/v2 now.json resolution. They are underscore-prefixed internals of
+# the tool module today. We alias them here to a module-local name so:
+#
+# 1. Future refactors (promoting the helpers to a dedicated
+#    ``kernel_path`` module, for example) can replace these aliases
+#    without touching the resource-handler code below.
+# 2. Readers of :mod:`alive_mcp.resources.kernel` see the integration
+#    boundary in one place rather than discovering three separate
+#    reach-throughs spread across the module.
+#
+# The coupling is accepted for v0.1; promoting to a shared utility is
+# a v0.2 refactor if a third consumer appears.
+# ---------------------------------------------------------------------------
+
+_iter_walnut_paths = walnut_tools._iter_walnut_paths
+_kernel_file_in_world = walnut_tools._kernel_file_in_world
+_resolve_now_path = walnut_tools._resolve_now_path
+
+
 #: MIME type for each kernel-file stem. Mirrors the tool layer's
 #: ``_MIME_MAP`` so list / read / tool all agree on the content type.
 _MIME_MAP = {
@@ -259,7 +283,7 @@ def _build_resource_entries(world_root: str) -> List[mcp_types.Resource]:
     propagate as :class:`OSError`; the caller converts that into an
     MCP internal-error.
     """
-    walnuts = walnut_tools._iter_walnut_paths(world_root)
+    walnuts = _iter_walnut_paths(world_root)
     entries: List[mcp_types.Resource] = []
     for walnut_path in walnuts:
         display = _walnut_display_name(walnut_path)
@@ -331,9 +355,7 @@ def _resolve_kernel_file_for_uri(
     # the World. This is the same check the tool layer makes in
     # :func:`walnut_tools._resolve_walnut`; sharing the helper keeps
     # the two layers from drifting.
-    key_path = walnut_tools._kernel_file_in_world(
-        world_root, walnut_abs, "key.md"
-    )
+    key_path = _kernel_file_in_world(world_root, walnut_abs, "key.md")
     if key_path is None:
         _raise_invalid_params(
             "no walnut at {!r} in this World".format(walnut_path)
@@ -343,12 +365,10 @@ def _resolve_kernel_file_for_uri(
     # resolver shared with the tool layer. The other three files live
     # at ``_kernel/<stem>.md`` in the v3 layout only.
     if file == "now":
-        target = walnut_tools._resolve_now_path(world_root, walnut_abs)
+        target = _resolve_now_path(world_root, walnut_abs)
     else:
         basename = "{}.md".format(file)
-        target = walnut_tools._kernel_file_in_world(
-            world_root, walnut_abs, basename
-        )
+        target = _kernel_file_in_world(world_root, walnut_abs, basename)
 
     if target is None:
         _raise_invalid_params(
@@ -501,6 +521,20 @@ def register(server: FastMCP[Any]) -> None:
         except PermissionError:
             _raise_internal_error(
                 "permission denied reading kernel file {!r} for walnut {!r}".format(
+                    file, walnut_path
+                )
+            )
+        except (FileNotFoundError, NotADirectoryError):
+            # Race between ``_resolve_kernel_file_for_uri`` (which
+            # stat'd the target as existing) and the actual ``open``:
+            # a concurrent save, rename, or delete can remove the
+            # file between the two syscalls. Classify as
+            # ``INVALID_PARAMS`` (same code as the static "file
+            # missing" case from resolve) rather than an internal
+            # error -- from the client's perspective, "the file you
+            # asked for is not there" is the same outcome either way.
+            _raise_invalid_params(
+                "kernel file {!r} is missing for walnut {!r}".format(
                     file, walnut_path
                 )
             )

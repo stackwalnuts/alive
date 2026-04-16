@@ -466,12 +466,14 @@ def decode_kernel_uri(uri: str) -> Tuple[str, str]:
             raise InvalidURIError(
                 "walnut_path segment must not contain '/': {!r}".format(decoded)
             )
-        # Reject NUL bytes and other control characters that are
-        # invalid in filenames on every supported platform. Letting
-        # these through would pass a bogus path to :func:`safe_join`
-        # and rely on downstream ``open()`` to raise -- the resource
-        # layer's contract is clearer if we reject at the URI
-        # boundary.
+        # Reject NUL bytes. NUL is invalid in filenames on every
+        # supported platform; even if the path-safety layer
+        # (safe_join) caught a NUL-bearing segment, the error
+        # message would be generic. Rejecting at the URI boundary
+        # keeps the diagnostic tight. v0.1 policy is NUL-only --
+        # other control characters are technically valid in POSIX
+        # filenames, so tightening here would reject legitimate
+        # (albeit rare) walnut names.
         if "\x00" in decoded:
             raise InvalidURIError(
                 "walnut_path segment contains NUL byte: {!r}".format(raw)
