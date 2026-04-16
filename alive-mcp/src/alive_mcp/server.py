@@ -125,6 +125,7 @@ logging.basicConfig(
 )
 
 import asyncio  # noqa: E402
+import os  # noqa: E402
 import urllib.parse  # noqa: E402
 from contextlib import asynccontextmanager  # noqa: E402
 from dataclasses import dataclass, field  # noqa: E402
@@ -137,6 +138,10 @@ from pydantic import AnyUrl  # noqa: E402
 from watchdog.observers.api import BaseObserver  # noqa: E402
 
 from alive_mcp import __version__  # noqa: E402
+from alive_mcp.audit import (  # noqa: E402
+    AuditWriterState,
+    run_audit_writer,
+)
 from alive_mcp.errors import WorldNotFoundError  # noqa: E402
 from alive_mcp.resources.subscriptions import (  # noqa: E402
     KernelEventHandler,
@@ -215,10 +220,20 @@ class AppContext:
         default_factory=lambda: asyncio.Queue(maxsize=AUDIT_QUEUE_MAXSIZE)
     )
 
-    #: Background task draining the audit queue. The stub writer in this
-    #: module does nothing with drained items; T12 replaces the function
-    #: with the real writer.
+    #: Background task draining the audit queue. The T12 writer pulls
+    #: entries off :attr:`audit_queue` and appends one JSON line per
+    #: entry to ``<world>/.alive/_mcp/audit.log`` (with rotation). The
+    #: task is (re)started whenever :attr:`world_root` resolves to a
+    #: new location so the audit file lives under the active World.
     audit_writer_task: Optional[asyncio.Task[None]] = None
+
+    #: Shared state object the writer publishes onto -- the ``audited``
+    #: decorator reads :attr:`AuditWriterState.disk_full` BEFORE
+    #: queuing so a stalled writer fails tool invocations closed
+    #: (``ERR_AUDIT_DISK_FULL``) rather than silently dropping audit
+    #: entries. Created eagerly so the decorator can dereference it
+    #: whether or not the writer task has started yet.
+    audit_writer_state: AuditWriterState = field(default_factory=AuditWriterState)
 
     #: watchdog ``Observer`` instance. Wired up once the World root is
     #: resolved (either via env fallback at startup or via Roots after
@@ -407,33 +422,80 @@ def _configure_logging(level: int = logging.INFO) -> None:
 
 
 # -----------------------------------------------------------------------------
-# Audit writer stub. T12 replaces this with the JSONL writer.
+# Audit writer task management.
+#
+# The writer implementation lives in :mod:`alive_mcp.audit`. The lifespan
+# creates the task lazily -- once per server run -- when the World root
+# is known. World re-resolution (via ``roots/list_changed``) cancels the
+# running task and starts a new one pinned to the new World.
 # -----------------------------------------------------------------------------
 
 
-async def _audit_writer_stub(queue: asyncio.Queue[Any]) -> None:
-    """Drain ``queue`` forever, discarding items.
+def _start_audit_writer(app_context: AppContext) -> None:
+    """(Re)start the audit writer task for the current :attr:`AppContext.world_root`.
 
-    The v0.1 skeleton has no tools that produce audit records, but the
-    queue and writer task exist so T6-T12 can land incrementally without
-    having to rewire the lifespan each time. The stub is intentionally
-    cheap — it blocks on ``queue.get()`` and then throws the result away
-    with a ``task_done`` to keep the queue's internal counters sane.
+    Safe to call:
 
-    When T12 lands, this function is replaced by the JSONL writer. The
-    signature stays stable so the lifespan code that starts the task does
-    not change.
+    * At lifespan entry if env-only discovery resolved a World.
+    * From the Roots-discovery callback when the World changes.
+    * After :func:`_stop_audit_writer` -- the two calls are mirrored
+      so a world change tears down the old writer before starting
+      the new one.
+
+    If the world_root is None, the call is a no-op -- the writer needs
+    a resolved World to know where to place ``audit.log``. The
+    ``audited`` decorator still works in that state: ``audit_queue``
+    exists, writer_state.disk_full stays False, and entries silently
+    queue (up to the bounded queue cap) until a World is resolved.
+    In practice the decorator emits entries only from tool calls, and
+    tool calls without a World return ``ERR_NO_WORLD`` BEFORE the
+    audit queue.put_nowait, so the no-World queue stays near-empty.
     """
+    if app_context.world_root is None:
+        return
+    # Point the shared state at the active audit file so the decorator
+    # pre-check (disk_full) reads from the same instance the writer
+    # mutates. Recomputed every start so a World change resets the
+    # path. ``AUDIT_RELPATH`` is "``.alive/_mcp/audit.log``" (POSIX
+    # components); ``os.path.join`` normalizes to the native separator.
+    from alive_mcp.audit import AUDIT_RELPATH  # local import (cycle-avoid).
+
+    app_context.audit_writer_state.active_path = os.path.join(
+        app_context.world_root, *AUDIT_RELPATH.split("/")
+    )
+    app_context.audit_writer_task = asyncio.create_task(
+        run_audit_writer(
+            app_context.audit_queue,
+            world_root=app_context.world_root,
+            state=app_context.audit_writer_state,
+        ),
+        name="alive-mcp.audit_writer",
+    )
+
+
+async def _stop_audit_writer(app_context: AppContext) -> None:
+    """Cancel the audit writer and await its clean exit.
+
+    Idempotent -- a None task is a no-op. The writer's CancelledError
+    path drains remaining entries best-effort before re-raising, so
+    awaiting the task here also awaits the final drain. We bound the
+    outer await so a wedged executor cannot hang lifespan teardown
+    indefinitely.
+    """
+    task = app_context.audit_writer_task
+    if task is None:
+        return
+    task.cancel()
     try:
-        while True:
-            item = await queue.get()
-            # Stub: no-op. T12 writes ``item`` as a JSON line to
-            # <world>/.alive/_mcp/audit.log with 0o600 perms.
-            del item
-            queue.task_done()
+        await asyncio.wait_for(task, timeout=3.0)
+    except asyncio.TimeoutError:
+        logger.warning("audit writer shutdown exceeded 3s; abandoning task")
     except asyncio.CancelledError:
-        # Normal shutdown path — re-raise so the task exits cleanly.
-        raise
+        # Normal outcome when we cancel the task above.
+        pass
+    except Exception:  # noqa: BLE001
+        logger.exception("audit writer task raised during shutdown")
+    app_context.audit_writer_task = None
 
 
 # -----------------------------------------------------------------------------
@@ -629,6 +691,19 @@ async def _discover_world_with_roots(
         # reads still work).
         if resolved != previous or app_context.observer is None:
             _restart_observer(app_context, resolved)
+
+        # T12: (re)start the audit writer for the active World so
+        # ``audit.log`` lives under the World the client is actually
+        # operating on. A world change across Roots updates is rare
+        # but must move the audit file to match; otherwise we'd keep
+        # appending to a stale World's log.
+        if resolved != previous or app_context.audit_writer_task is None:
+            await _stop_audit_writer(app_context)
+            # Reset disk_full -- a fresh World may have disk space
+            # even if the old one didn't. active_path is recomputed
+            # by _start_audit_writer.
+            app_context.audit_writer_state.disk_full = False
+            _start_audit_writer(app_context)
 
 
 def _stop_observer(app_context: AppContext) -> None:
@@ -850,13 +925,17 @@ async def lifespan(server: FastMCP[AppContext]) -> AsyncIterator[AppContext]:
             exc,
         )
 
-    # Step 3: audit writer. The task is a background daemon; failures
-    # inside it will crash the task but not the server. T12 adds a
-    # supervisor that restarts the writer on failure.
-    app_context.audit_writer_task = asyncio.create_task(
-        _audit_writer_stub(app_context.audit_queue),
-        name="alive-mcp.audit_writer_stub",
-    )
+    # Step 3: audit writer. Started IFF env-only discovery resolved a
+    # World -- the writer needs a World root to know where to place
+    # ``audit.log``. If the world resolves later (via Roots after
+    # ``initialized``), :func:`_discover_world_with_roots` starts the
+    # writer as part of the world-change path. Until the writer
+    # starts, tool calls that hit ``audited`` queue entries onto the
+    # bounded queue; in practice those calls return ``ERR_NO_WORLD``
+    # at the tool body before ``put_nowait`` runs, so the no-World
+    # queue stays near-empty.
+    if app_context.world_root is not None:
+        _start_audit_writer(app_context)
 
     # Step 4: watchdog Observer. Start the subscription-aware observer
     # IFF env-only discovery resolved a World root; otherwise the
@@ -999,14 +1078,7 @@ async def lifespan(server: FastMCP[AppContext]) -> AsyncIterator[AppContext]:
         _stop_observer(app_context)
 
         try:
-            if app_context.audit_writer_task is not None:
-                app_context.audit_writer_task.cancel()
-                try:
-                    await app_context.audit_writer_task
-                except (asyncio.CancelledError, Exception):  # noqa: BLE001
-                    # CancelledError is the normal shutdown path; any
-                    # other exception we swallow after logging.
-                    pass
+            await _stop_audit_writer(app_context)
         except Exception:  # noqa: BLE001
             logger.exception("audit writer shutdown failed")
 
