@@ -78,7 +78,7 @@ to any MCP-capable agent.
 - `uvx alive-mcp@0.1.0` primary install path
 - `.mcpb` bundle for Claude Desktop one-click install
 - Per-client config snippets: Claude Desktop, Cursor, Codex CLI,
-  Gemini CLI, Continue.dev, ChatGPT (manual)
+  Gemini CLI, Continue.dev
 
 **Supported MCP clients:**
 
@@ -87,7 +87,6 @@ to any MCP-capable agent.
 - Codex CLI (full support)
 - Gemini CLI (full support)
 - Continue.dev (full support)
-- ChatGPT (config documented, not tested end-to-end)
 
 ### Deferred to v0.2
 
@@ -95,6 +94,7 @@ to any MCP-capable agent.
 - Prompts primitive (user-triggered flows)
 - Sampling / elicitation primitives
 - Streamable HTTP / OAuth remote-server transport
+- ChatGPT support (requires remote Streamable HTTP endpoint with OAuth)
 - Case-insensitive path matching on macOS (HFS+/APFS)
 - Multi-world support (world_id in tool signatures)
 - Real PyPI publication (held for explicit decision)

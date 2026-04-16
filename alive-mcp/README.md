@@ -1,5 +1,7 @@
 # alive-mcp
 
+[![Release](https://img.shields.io/github/v/release/alivecontext/alive?filter=alive-mcp-*&label=alive-mcp)](https://github.com/alivecontext/alive/releases?q=alive-mcp)
+
 Read-only [Model Context Protocol](https://modelcontextprotocol.io)
 server that exposes the [ALIVE Context System](https://github.com/alivecontext/alive)
 to every MCP-capable agent: Claude Desktop, Cursor, Codex CLI,
@@ -69,10 +71,10 @@ isolating the install; `uvx` handles both automatically.
 Pin to a specific commit or tag (useful for testing a PR or pre-release):
 
 ```bash
-uvx --from git+https://github.com/alivecontext/alive.git@v0.1.0#subdirectory=claude-code/alive-mcp alive-mcp
+uvx --from git+https://github.com/alivecontext/alive.git@alive-mcp-v0.1.0#subdirectory=claude-code/alive-mcp alive-mcp
 ```
 
-Drop `@v0.1.0` for `main`, or substitute a branch / commit SHA. The
+Drop `@alive-mcp-v0.1.0` for `main`, or substitute a branch / commit SHA. The
 `subdirectory=` qualifier is required because alive-mcp lives inside
 the `alivecontext/alive` monorepo at `claude-code/alive-mcp/`.
 
