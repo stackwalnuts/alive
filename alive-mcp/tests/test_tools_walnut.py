@@ -511,6 +511,40 @@ class GetWalnutStateTests(unittest.TestCase):
             "KERNEL_FILE_MISSING",
         )
 
+    def test_malformed_v3_falls_through_to_v2(self) -> None:
+        """A corrupt v3 now.json must NOT mask a valid v2 fallback.
+
+        Mirrors the posture of
+        ``project_pure.scan_nested_walnuts``: if the v3 path exists but
+        is malformed, the tool tries the v2 _generated fallback before
+        giving up. This fixes a nitpick from codex round 1.
+        """
+        import warnings as _warnings
+
+        _make_walnut(self.world, "04_Ventures/split", goal="x")
+        # v3 is corrupt JSON.
+        bad_v3 = (
+            self.world.walnut_path("04_Ventures/split")
+            / "_kernel"
+            / "now.json"
+        )
+        bad_v3.parent.mkdir(parents=True, exist_ok=True)
+        bad_v3.write_text("{ not valid json", encoding="utf-8")
+        # v2 is valid.
+        self.world.write_v2_now(
+            "04_Ventures/split",
+            {"phase": "maintaining", "updated": "2026-03-01T00:00:00Z"},
+        )
+        # Silence the MalformedYAMLWarning emitted by parse_now_json;
+        # it's expected given the malformed v3 above.
+        with _warnings.catch_warnings():
+            _warnings.simplefilter("ignore")
+            env = self._call("04_Ventures/split")
+        self.assertFalse(env["isError"], msg=env)
+        self.assertEqual(
+            env["structuredContent"]["phase"], "maintaining"
+        )
+
     def test_now_json_non_dict_root_returns_missing(self) -> None:
         _make_walnut(self.world, "04_Ventures/weird", goal="x")
         weird = (

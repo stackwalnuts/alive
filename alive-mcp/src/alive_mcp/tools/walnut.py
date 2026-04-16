@@ -79,6 +79,7 @@ from mcp.server.fastmcp import Context, FastMCP
 from mcp.types import ToolAnnotations
 
 from alive_mcp import envelope, errors
+from alive_mcp._vendor._pure import project_pure
 from alive_mcp.paths import safe_join
 from alive_mcp.tools._audit_stub import audited
 
@@ -291,6 +292,12 @@ def _resolve_now_path(walnut_abs: str) -> Optional[str]:
     Returns ``None`` if neither exists -- the caller handles that as
     ``ERR_KERNEL_FILE_MISSING``. See the epic spec "now.json canonical
     resolution order" section.
+
+    This checks EXISTENCE only, not parseability. If a v3 file exists
+    but is malformed, we don't automatically fall through here --
+    callers that want parse-aware fallback (get_walnut_state) use the
+    :func:`_iter_now_candidates` helper below which returns every
+    candidate in order.
     """
     v3 = os.path.join(walnut_abs, _KERNEL_DIRNAME, "now.json")
     if os.path.isfile(v3):
@@ -301,24 +308,39 @@ def _resolve_now_path(walnut_abs: str) -> Optional[str]:
     return None
 
 
+def _iter_now_candidates(walnut_abs: str) -> List[str]:
+    """Return every existing ``now.json`` path in v3-then-v2 order.
+
+    Used by ``get_walnut_state`` to mirror the vendor scanner's posture
+    (``project_pure.scan_nested_walnuts``): when a v3 now.json exists
+    but is malformed, try the v2 fallback before returning
+    ``ERR_KERNEL_FILE_MISSING``. Callers that want existence-first
+    single-shot semantics keep using :func:`_resolve_now_path`.
+    """
+    candidates: List[str] = []
+    v3 = os.path.join(walnut_abs, _KERNEL_DIRNAME, "now.json")
+    if os.path.isfile(v3):
+        candidates.append(v3)
+    v2 = os.path.join(walnut_abs, _KERNEL_DIRNAME, "_generated", "now.json")
+    if os.path.isfile(v2):
+        candidates.append(v2)
+    return candidates
+
+
 def _read_now_for_health(walnut_abs: str) -> dict[str, Any]:
     """Return the parsed now.json if readable, else an empty dict.
 
     Best-effort -- a missing or malformed now.json just means we can't
     derive ``health`` or ``updated``; the walnut still appears in the
-    listing. Matches Hermes' posture.
+    listing. Matches Hermes' posture. Delegates to the vendored pure
+    parser so the list-path and tool-path share a single source of
+    truth for now.json semantics.
     """
     now_path = _resolve_now_path(walnut_abs)
     if now_path is None:
         return {}
-    try:
-        with open(now_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except (IOError, OSError, json.JSONDecodeError, UnicodeDecodeError):
-        return {}
-    if not isinstance(data, dict):
-        return {}
-    return data
+    data = project_pure.parse_now_json(now_path)
+    return data if data is not None else {}
 
 
 def _health_from(updated: str, rhythm: str) -> str:
@@ -780,59 +802,58 @@ async def get_walnut_state(
     except errors.WalnutNotFoundError:
         return _walnut_not_found_envelope(world_root, walnut)
 
-    now_path = _resolve_now_path(walnut_abs)
-    if now_path is None:
+    # Try v3 first, then v2 -- mirrors project_pure.scan_nested_walnuts'
+    # posture. If v3 exists but is malformed or has a non-dict root, we
+    # fall through to v2 rather than surface a MISSING error that hid a
+    # usable v2 projection. Only after EVERY candidate fails do we
+    # emit ERR_KERNEL_FILE_MISSING.
+    candidates = _iter_now_candidates(walnut_abs)
+    if not candidates:
         return envelope.error(
             errors.ERR_KERNEL_FILE_MISSING,
             walnut=walnut,
             file="now",
         )
-    try:
-        with open(now_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except PermissionError:
+
+    # Probe permission separately so we can distinguish "unreadable
+    # due to perms" from "parse failure" at the envelope layer. The
+    # vendored parser swallows both into ``None`` with a warning --
+    # fine for projection scanners, but tool callers need the
+    # distinction for actionable suggestions.
+    last_error_was_permission = False
+    for now_path in candidates:
+        if not os.access(now_path, os.R_OK):
+            last_error_was_permission = True
+            continue
+        data = project_pure.parse_now_json(now_path)
+        if data is None:
+            # parse_now_json already emitted a MalformedYAMLWarning;
+            # the tool layer doesn't need to duplicate the log. Fall
+            # through to the next candidate.
+            continue
+        # Return the parsed dict verbatim. Tool contract is "read
+        # what's on disk" -- no projection / reshape. Callers that
+        # need a stable subset filter on their side or use
+        # read_walnut_kernel(file="now") for the raw text.
+        return envelope.ok(data)
+
+    # Every candidate failed. If the last failure was a permission
+    # error (i.e. no candidate ever parsed AND at least one was
+    # unreadable due to perms), surface that specifically; otherwise
+    # the file(s) exist but are unusable which we map to MISSING
+    # because the client can't distinguish "never written" from
+    # "corrupt" without another tool (T12 audit has the detail).
+    if last_error_was_permission:
         return envelope.error(
             errors.ERR_PERMISSION_DENIED,
             walnut=walnut,
             file="now",
         )
-    except (json.JSONDecodeError, UnicodeDecodeError, OSError) as exc:
-        # Malformed on-disk projection. The audit log (T12) captures
-        # the raw exception; the envelope surfaces only the code. Map
-        # to ERR_KERNEL_FILE_MISSING because from the client's view
-        # the file is not *usable*, which is indistinguishable from
-        # missing at the tool layer. v0.2 could add ERR_KERNEL_FILE_
-        # CORRUPT if we decide the distinction matters.
-        logger.warning(
-            "get_walnut_state: now.json parse failed for %r: %s",
-            walnut,
-            exc,
-        )
-        return envelope.error(
-            errors.ERR_KERNEL_FILE_MISSING,
-            walnut=walnut,
-            file="now",
-        )
-
-    if not isinstance(data, dict):
-        # Root must be an object for this to be a valid projection.
-        logger.warning(
-            "get_walnut_state: now.json root is %s for %r, expected dict",
-            type(data).__name__,
-            walnut,
-        )
-        return envelope.error(
-            errors.ERR_KERNEL_FILE_MISSING,
-            walnut=walnut,
-            file="now",
-        )
-
-    # Return the parsed dict verbatim under the envelope. The tool's
-    # contract is "read what's on disk" -- we don't project or
-    # reshape. Callers that need a stable subset should filter on
-    # their side or use read_walnut_kernel with file="now" to get the
-    # raw text.
-    return envelope.ok(data)
+    return envelope.error(
+        errors.ERR_KERNEL_FILE_MISSING,
+        walnut=walnut,
+        file="now",
+    )
 
 
 @audited

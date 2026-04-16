@@ -500,6 +500,103 @@ class EnvelopeErrorShapeTests(unittest.TestCase):
             )
 
 
+class EnvelopeDynamicSuggestionsTests(unittest.TestCase):
+    """``envelope.error(suggestions=...)`` accepts a dynamic override.
+
+    The tool layer needs to prepend fuzzy walnut-path near-matches to
+    the static codebook guidance. The envelope honors a keyword-only
+    ``suggestions=`` list; ``None`` (default) falls back to the
+    codebook; any list (including empty) replaces it. Dynamic
+    suggestion strings run through the stricter full-value sanitizer
+    so an accidental absolute-path leak is masked.
+    """
+
+    def test_none_suggestions_falls_back_to_codebook(self) -> None:
+        resp_default = envelope.error(
+            errors.ErrorCode.ERR_WALNUT_NOT_FOUND, walnut="nova-station"
+        )
+        resp_none = envelope.error(
+            errors.ErrorCode.ERR_WALNUT_NOT_FOUND,
+            suggestions=None,
+            walnut="nova-station",
+        )
+        self.assertEqual(
+            resp_default["structuredContent"]["suggestions"],
+            resp_none["structuredContent"]["suggestions"],
+        )
+        self.assertGreater(
+            len(resp_none["structuredContent"]["suggestions"]), 0
+        )
+
+    def test_explicit_list_replaces_codebook(self) -> None:
+        resp = envelope.error(
+            errors.ErrorCode.ERR_WALNUT_NOT_FOUND,
+            suggestions=["Try 04_Ventures/alive", "Try 04_Ventures/nova-station"],
+            walnut="aliv",
+        )
+        self.assertEqual(
+            resp["structuredContent"]["suggestions"],
+            ["Try 04_Ventures/alive", "Try 04_Ventures/nova-station"],
+        )
+
+    def test_empty_list_replaces_codebook(self) -> None:
+        """``suggestions=[]`` emits an empty list, not the codebook."""
+        resp = envelope.error(
+            errors.ErrorCode.ERR_WALNUT_NOT_FOUND,
+            suggestions=[],
+            walnut="nova-station",
+        )
+        self.assertEqual(resp["structuredContent"]["suggestions"], [])
+
+    def test_absolute_path_in_suggestion_is_redacted(self) -> None:
+        """Dynamic suggestions must NOT leak absolute filesystem paths.
+
+        Uses the stricter kwarg-style full-value sanitizer: a
+        suggestion string containing an absolute-path indicator is
+        replaced with ``"<path>"`` entirely, matching the treatment of
+        string kwargs.
+        """
+        resp = envelope.error(
+            errors.ErrorCode.ERR_WALNUT_NOT_FOUND,
+            suggestions=[
+                "Try /Users/patrick/world/04_Ventures/alive",
+                "Clean relpath 04_Ventures/nova-station",
+            ],
+            walnut="foo",
+        )
+        sugg = resp["structuredContent"]["suggestions"]
+        self.assertEqual(sugg[0], "<path>")
+        # Clean suggestion passes through.
+        self.assertEqual(sugg[1], "Clean relpath 04_Ventures/nova-station")
+
+    def test_suggestion_with_path_and_spaces_is_redacted(self) -> None:
+        """Spaces inside an absolute path still trip the sanitizer.
+
+        Segment-based ``_redact_paths`` (the baseline pass) can miss
+        paths containing spaces; the full-value sanitizer catches
+        them because the prefix indicator ``/Users`` / ``C:\\`` is
+        enough to flag the whole string as tainted.
+        """
+        resp = envelope.error(
+            errors.ErrorCode.ERR_WALNUT_NOT_FOUND,
+            suggestions=["located at /Users/me/my stuff/world/alive"],
+            walnut="x",
+        )
+        self.assertEqual(
+            resp["structuredContent"]["suggestions"], ["<path>"]
+        )
+
+    def test_windows_path_in_suggestion_is_redacted(self) -> None:
+        resp = envelope.error(
+            errors.ErrorCode.ERR_WALNUT_NOT_FOUND,
+            suggestions=[r"Tried C:\Users\me\world\alive"],
+            walnut="x",
+        )
+        self.assertEqual(
+            resp["structuredContent"]["suggestions"], ["<path>"]
+        )
+
+
 class EnvelopePathRedactionTests(unittest.TestCase):
     """Defense-in-depth: absolute paths in kwargs don't leak into envelopes.
 

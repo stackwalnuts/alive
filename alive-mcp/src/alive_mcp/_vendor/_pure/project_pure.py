@@ -840,8 +840,53 @@ def assemble(
     return now
 
 
+def parse_now_json(path: str) -> Optional[Dict[str, Any]]:
+    """Parse a ``now.json`` projection at ``path``. Returns dict or None.
+
+    Thin stdlib-only wrapper around :func:`json.load` that enforces the
+    now.json shape expected by alive-mcp tools: root must be a dict.
+    Used by the v0.1 MCP tool layer (``get_walnut_state``,
+    ``read_walnut_kernel(file="now")``) so the canonical parser lives
+    with the rest of the pure vendored helpers rather than being
+    reinvented in every tool handler.
+
+    Returns:
+        Parsed dict on success.
+        None when the file is missing, unreadable, has malformed JSON,
+        or has a non-dict root. Callers map None to the appropriate
+        MCP error envelope (typically ``ERR_KERNEL_FILE_MISSING``).
+
+    A ``MalformedYAMLWarning`` is emitted on parse failure or schema
+    drift so callers that install a strict warning filter can promote
+    the condition to an exception if they want hard failure semantics.
+    """
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (IOError, OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        warnings.warn(
+            "cannot parse now.json at {}: {}".format(path, exc),
+            MalformedYAMLWarning,
+            stacklevel=2,
+        )
+        return None
+    if not isinstance(data, dict):
+        warnings.warn(
+            "malformed now.json at {} (root is {}, expected dict)".format(
+                path, type(data).__name__
+            ),
+            MalformedYAMLWarning,
+            stacklevel=2,
+        )
+        return None
+    return data
+
+
 __all__ = [
     "parse_log",
+    "parse_now_json",
     "scan_bundles",
     "parse_manifest",
     "read_unscoped_tasks",

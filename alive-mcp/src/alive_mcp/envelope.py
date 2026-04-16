@@ -385,15 +385,26 @@ def error(
 
     # Resolve the suggestions list. ``None`` (the default) falls back
     # to the static codebook; an explicit list (even empty) REPLACES
-    # it. Dynamic suggestion strings are run through the path redactor
-    # too — the tool layer passes walnut POSIX-relpaths as fuzzy near-
-    # matches, which don't trigger the absolute-path regex, but a
-    # future caller that accidentally passes an absolute path still
-    # gets scrubbed. The redactor is idempotent on safe strings.
+    # it. Dynamic suggestions run through the stricter full-value
+    # sanitizer: if ANY absolute-path indicator appears anywhere in a
+    # suggestion string, the ENTIRE string is replaced with
+    # ``"<path>"`` — same policy as :func:`_sanitize_kwargs`. This
+    # catches paths with spaces, unicode, or unusual characters that
+    # the segment-based :func:`_redact_paths` regex might miss. A
+    # second ``_redact_paths`` pass then scrubs any residual absolute
+    # path in legitimate multi-segment suggestions (e.g. a "Did you
+    # mean X, Y" string where X happened to be a relpath that looks
+    # path-ish). Belt and suspenders.
     if suggestions is None:
         final_suggestions: list[str] = list(static_suggestions)
     else:
-        final_suggestions = [_redact_paths(str(s)) for s in suggestions]
+        final_suggestions = []
+        for s in suggestions:
+            text = str(s)
+            if _kwarg_contains_absolute_path(text):
+                final_suggestions.append("<path>")
+            else:
+                final_suggestions.append(_redact_paths(text))
 
     structured: dict[str, Any] = {
         "error": short_code,
