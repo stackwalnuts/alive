@@ -11,8 +11,14 @@ This document covers **Claude Desktop on macOS** because that is the
 platform where one-click `.mcpb` install is currently most polished.
 Windows follows the same flow with platform-appropriate paths
 (`%APPDATA%\Claude\` instead of `~/Library/Application Support/Claude/`).
-Linux is not yet a first-class Claude Desktop target and is out of
-scope for this verification.
+
+The manifest declares `compatibility.platforms: ["darwin", "win32",
+"linux"]` — the alive-mcp server itself runs fine on all three
+because it is plain Python + `uv`. Linux is listed as supported by
+the bundle payload; it is just not verified via the Claude Desktop
+drag-and-drop flow below because Claude Desktop's Linux build is not
+yet a first-class target. Linux users today wire the server via the
+config snippets in `docs/configs/` rather than this MCPB flow.
 
 ## Prerequisites
 

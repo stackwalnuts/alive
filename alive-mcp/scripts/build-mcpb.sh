@@ -41,7 +41,7 @@
 # Exit codes
 # ----------
 #   0  success
-#   1  missing prerequisite (npm, python) or validation failure
+#   1  missing prerequisite (npm) or validation failure
 #   2  usage error
 
 set -euo pipefail
@@ -62,7 +62,9 @@ Output:
 
 Requirements:
   * npm (installs @anthropic-ai/mcpb globally on first run)
-  * python3 (used to read the version from pyproject.toml)
+  * awk (standard on every Unix; used to parse pyproject.toml)
+  * jq is preferred for manifest JSON parsing but optional —
+    falls back to awk when absent
 
 The script is idempotent and safe to re-run. It wipes and re-creates
 the staging dir on every invocation.
