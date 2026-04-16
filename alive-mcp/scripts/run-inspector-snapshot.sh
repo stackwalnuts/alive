@@ -108,8 +108,11 @@ case "${METHOD}" in
 esac
 
 # Toolchain sanity. Fail fast with a clear message rather than letting
-# npx / uv surface their own errors deep in a pipeline.
-for bin in npx uv python3; do
+# npx / uv / node surface their own errors deep in a pipeline. ``node``
+# is included because ``npx`` fails with a confusing "spawn EACCES" or
+# "bad interpreter" error when Node is missing — a dedicated check up
+# front produces a clearer diagnostic.
+for bin in bash npx node uv python3; do
     if ! command -v "${bin}" >/dev/null 2>&1; then
         echo "error: ${bin} is required on PATH to run the Inspector snapshot generator" >&2
         exit 1
@@ -145,7 +148,16 @@ unset ALIVE_WORLD_PATH
 # tempfile, let stdout flow to ``RAW_JSON``. On success we drop the
 # stderr silently; on failure we echo it so the caller / test harness
 # sees the real reason.
-STDERR_LOG="$(mktemp -t alive-mcp-inspector-stderr.XXXXXX)"
+#
+# Tempfile location: default to the system tempdir, but fall back to a
+# repo-local ``.tmp/`` when ``mktemp -t`` fails (locked-down sandboxes
+# with no writable ``$TMPDIR``). Either way the file gets cleaned up
+# on exit via the trap.
+if ! STDERR_LOG="$(mktemp -t alive-mcp-inspector-stderr.XXXXXX 2>/dev/null)"; then
+    REPO_TMP="${PKG_ROOT}/.tmp"
+    mkdir -p "${REPO_TMP}"
+    STDERR_LOG="$(mktemp "${REPO_TMP}/alive-mcp-inspector-stderr.XXXXXX")"
+fi
 # Ensure tempfile cleanup on any exit path (success or abort).
 trap 'rm -f "${STDERR_LOG}"' EXIT
 

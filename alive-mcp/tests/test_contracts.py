@@ -110,10 +110,13 @@ def _hermetic_env() -> dict[str, str]:
     env = dict(os.environ)
     env.pop("ALIVE_WORLD_ROOT", None)
     env.pop("ALIVE_WORLD_PATH", None)
-    # We deliberately do NOT set ALIVE_CONTRACT_WORLD_ROOT here: the
-    # generator already defaults to the committed fixture world, and
-    # leaving the override unset keeps the test and the script in
-    # agreement on which world is "the contract world".
+    # Also strip the dedicated contract-world override. A developer
+    # that has ``ALIVE_CONTRACT_WORLD_ROOT`` exported in their shell
+    # (likely while iterating on a new contract case) must not see
+    # tests silently honor that export — the COMMITTED golden was
+    # produced against the fixture world, period. Tests that need a
+    # custom world pass it explicitly via their own env= argument.
+    env.pop("ALIVE_CONTRACT_WORLD_ROOT", None)
     return env
 
 
