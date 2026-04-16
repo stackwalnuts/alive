@@ -83,10 +83,19 @@ Claude will call `list_walnuts` via MCP. Expected outcomes:
 - **First call succeeds.** The response contains a JSON envelope with
   a `walnuts` array whose entries match your world's actual walnut
   set. Against the fixture world you should see 3 walnuts.
-- **No stderr spam in the log.** Open the Claude Desktop log stream
-  (`~/Library/Logs/Claude/mcp-server-alive.log` on macOS). Startup
-  messages should be structured JSON; there should be no Python
-  tracebacks, no `ImportError`, no warnings about missing
+- **No stderr spam in the log.** Claude Desktop writes per-server logs
+  to `~/Library/Logs/Claude/` on macOS; the filename pattern is
+  `mcp-server-<something>.log` and the exact `<something>` can differ
+  by Claude Desktop build. Open the most recently modified
+  `mcp-server-*.log` whose contents reference ALIVE / alive-mcp:
+
+  ```bash
+  ls -lt ~/Library/Logs/Claude/mcp-server-*.log | head -5
+  grep -l alive-mcp ~/Library/Logs/Claude/mcp-server-*.log
+  ```
+
+  Startup messages should be structured JSON; there should be no
+  Python tracebacks, no `ImportError`, no warnings about missing
   dependencies.
 
 If all three check out, one-click install is working.
@@ -136,8 +145,9 @@ must be checked before the release ships.
 
 **Server status red in Settings → Connections.**
 
-Open `~/Library/Logs/Claude/mcp-server-alive.log`. The top of the log
-tells you why the server refused to start. Common cases:
+Open the most recent `mcp-server-*.log` under `~/Library/Logs/Claude/`
+(see "No stderr spam in the log" above for how to find it). The top
+of the log tells you why the server refused to start. Common cases:
 
 | Log snippet | Fix |
 |-------------|-----|

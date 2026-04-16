@@ -35,7 +35,7 @@
 # Usage
 # -----
 #   scripts/build-mcpb.sh              # build dist/alive-mcp-<version>.mcpb
-#   scripts/build-mcpb.sh --validate   # build, then run `mcpb validate` on the output
+#   scripts/build-mcpb.sh --validate   # validate the staged manifest, then pack
 #   scripts/build-mcpb.sh -h           # print help
 #
 # Exit codes
@@ -53,7 +53,7 @@ usage: build-mcpb.sh [--validate] [-h|--help]
 Build a Claude Desktop .mcpb bundle for alive-mcp.
 
 Options:
-  --validate   run `mcpb validate` on the staging dir before packing
+  --validate   run `mcpb validate` on the staged manifest before packing
                (recommended; catches manifest schema violations early)
   -h, --help   show this help and exit
 
@@ -130,51 +130,83 @@ fi
 # The manifest ``version`` field and the pyproject ``version`` field must
 # agree. Rather than parsing both and comparing, we read pyproject as the
 # source of truth (since ``uv`` will honor it at runtime) and use it to
-# name the output file. The manifest.json version is checked for agreement
-# later via `mcpb validate` when --validate is set; we also sanity-check
-# it here before staging.
+# name the output file.
+#
+# We avoid Python heredocs here for bash 3.2 compatibility: macOS ships
+# bash 3.2 by default, and 3.2's parser has quirks with mixed-quote
+# Python code inside ``$(<<'PY' ... PY)`` subshells. Pure bash plus awk
+# is portable to every bash on any platform and needs no tomllib / no
+# Python 3.11+ detection. ``pyproject.toml`` is author-controlled and
+# tiny, so an awk parser is entirely adequate: extract the first
+# ``version = "..."`` inside the ``[project]`` table header.
+#
+# Absolute path resolution: both files are referenced by the absolute
+# ``PACKAGE_DIR`` / ``MANIFEST_SRC`` computed from ``BASH_SOURCE``
+# above, so the script is fully CWD-independent.
 
-VERSION="$(
-    python3 - <<'PY'
-import sys, tomllib, pathlib
-pyproject = pathlib.Path(__file__).resolve().parent.parent / "pyproject.toml"
-# The heredoc runs with __file__ pointing at a temp path on some shells,
-# so resolve via argv[0] if that lookup fails.
-if not pyproject.exists():
-    pyproject = pathlib.Path("pyproject.toml")
-data = tomllib.loads(pyproject.read_text())
-sys.stdout.write(data["project"]["version"])
-PY
-)"
+extract_pyproject_version() {
+    # Usage: extract_pyproject_version <path-to-pyproject.toml>
+    #
+    # Prints the [project] table's version field to stdout. Returns
+    # non-zero if the field is missing. The awk program tracks whether
+    # we are inside ``[project]`` (set on that header, cleared on any
+    # other ``[...]`` header) so a ``version = "..."`` elsewhere in the
+    # file (e.g., under ``[tool.poetry]``) is not accidentally matched.
+    awk '
+        /^\[project\][[:space:]]*$/ { in_project = 1; next }
+        /^\[/                       { in_project = 0; next }
+        in_project && /^[[:space:]]*version[[:space:]]*=[[:space:]]*"[^"]+"/ {
+            match($0, /"[^"]+"/)
+            v = substr($0, RSTART + 1, RLENGTH - 2)
+            print v
+            exit 0
+        }
+    ' "$1"
+}
 
-# Fallback: if the heredoc above did not resolve the path cleanly (this
-# happens on minimal shells), use the env-passed path.
-if [[ -z "${VERSION:-}" ]]; then
-    VERSION="$(
-        PYPROJECT="${PACKAGE_DIR}/pyproject.toml" python3 - <<'PY'
-import os, sys, tomllib, pathlib
-data = tomllib.loads(pathlib.Path(os.environ["PYPROJECT"]).read_text())
-sys.stdout.write(data["project"]["version"])
-PY
-    )"
-fi
+VERSION="$(extract_pyproject_version "${PACKAGE_DIR}/pyproject.toml")"
 
 if [[ -z "${VERSION}" ]]; then
-    echo "error: could not extract version from pyproject.toml" >&2
+    echo "error: could not extract [project] version from ${PACKAGE_DIR}/pyproject.toml" >&2
     exit 1
 fi
 
 # Cross-check manifest version against pyproject version. The
 # ``mcpb pack`` step will embed the manifest as-is, so if these drift
 # Claude Desktop installs a bundle whose manifest claims one version
-# while the code reports another.
-MANIFEST_VERSION="$(
-    python3 - <<PY
-import json, pathlib, sys
-m = json.loads(pathlib.Path("${MANIFEST_SRC}").read_text())
-sys.stdout.write(m["version"])
-PY
-)"
+# while the code reports another. Same awk approach — no Python heredoc.
+extract_manifest_version() {
+    # Usage: extract_manifest_version <path-to-manifest.json>
+    #
+    # Prints the top-level ``"version"`` value. The JSON spec allows
+    # arbitrary key ordering, but we also want to avoid matching a
+    # nested ``"version"`` (e.g., under ``"compatibility"``). The awk
+    # program looks for ``"version":`` that is NOT indented beyond the
+    # top level. Our manifest is hand-maintained with two-space indent
+    # so "top level" means exactly two leading spaces.
+    awk '
+        /^  "version"[[:space:]]*:[[:space:]]*"[^"]+"/ {
+            # Strip the key portion, then extract the first quoted
+            # string from the rest. This handles trailing commas,
+            # trailing whitespace, and arbitrary line endings.
+            sub(/^.*"version"[[:space:]]*:[[:space:]]*/, "", $0)
+            match($0, /"[^"]+"/)
+            if (RSTART > 0) {
+                v = substr($0, RSTART + 1, RLENGTH - 2)
+                print v
+                exit 0
+            }
+        }
+    ' "$1"
+}
+
+MANIFEST_VERSION="$(extract_manifest_version "${MANIFEST_SRC}")"
+
+if [[ -z "${MANIFEST_VERSION}" ]]; then
+    echo "error: could not extract top-level \"version\" from ${MANIFEST_SRC}" >&2
+    echo "       the awk parser expects two-space indent on the version line" >&2
+    exit 1
+fi
 
 if [[ "${MANIFEST_VERSION}" != "${VERSION}" ]]; then
     echo "error: version drift detected" >&2
