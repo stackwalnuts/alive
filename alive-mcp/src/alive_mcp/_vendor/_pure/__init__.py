@@ -36,11 +36,25 @@ class WorldNotFoundError(Exception):
 
 
 class KernelFileError(Exception):
-    """Raised when a required ``_kernel/`` file cannot be read.
+    """Raised when a ``_kernel/`` file is present on disk but unreadable.
 
-    Includes both "missing on disk" and "present but unreadable" (permission
-    error, bad UTF-8). Callers should treat this as ``ERR_KERNEL_FILE_MISSING``
-    or ``ERR_KERNEL_FILE_CORRUPT`` based on the ``cause`` chain.
+    Covers permission errors, bad UTF-8 encoding, TOCTOU races where
+    ``open()`` fails AFTER an ``isfile()`` check passed (other than
+    ``ENOENT``), and any other ``OSError`` / ``UnicodeDecodeError`` that
+    prevents reading an existing file.
+
+    **Does NOT fire on "missing on disk".** Most helpers treat missing
+    kernel files as non-errors -- a fresh walnut legitimately has no
+    ``log.md`` yet, no ``tasks.json`` yet, etc. `parse_log` returns an
+    empty projection on missing log; `read_unscoped_tasks` returns an
+    empty list on missing tasks file. Callers that need "missing" as a
+    signal should check the returned shape (empty log with no entries,
+    empty task list) rather than catching this exception.
+
+    Callers should translate this exception into
+    ``ERR_KERNEL_FILE_CORRUPT`` per the v0.1 error taxonomy (T4).
+    ``ERR_KERNEL_FILE_MISSING`` is emitted by the MCP tool layer based on
+    tool-level preconditions, not by this exception.
     """
 
 

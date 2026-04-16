@@ -104,7 +104,7 @@ Defined in `_pure/__init__.py`:
 | Name                    | Base           | When raised                             |
 |-------------------------|----------------|-----------------------------------------|
 | `WorldNotFoundError`    | `Exception`    | No ancestor of a path contains `.alive/` |
-| `KernelFileError`       | `Exception`    | Required `_kernel/*` file unreadable    |
+| `KernelFileError`       | `Exception`    | `_kernel/*` file present on disk but unreadable (permission, encoding, post-`isfile` I/O). Missing files are NOT errors -- helpers return empty shapes instead. |
 | `MalformedYAMLWarning`  | `Warning`      | Structured-text parse/read failure on a kernel file, bundle manifest, squirrel entry, or `tasks.json` (YAML and JSON sources both emit this) |
 
 `MalformedYAMLWarning` is named after the original YAML manifest path it

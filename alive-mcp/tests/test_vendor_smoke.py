@@ -446,6 +446,57 @@ class ScanBundlesHonorsNestedWalnutBoundaries(unittest.TestCase):
             )
 
 
+class SummaryHonorsNestedWalnutBoundaries(unittest.TestCase):
+    """Regression: ``summary_from_walnut`` must not count child bundles.
+
+    ``tasks_pure._all_task_files`` stops at nested walnut boundaries, but
+    an earlier version of ``tasks_pure._find_bundles`` did not -- that
+    mismatch produced a summary where the total bundle count included a
+    child walnut's bundles even though that child's tasks were correctly
+    excluded. The two helpers now both honor boundaries.
+    """
+
+    def test_child_bundles_do_not_inflate_summary_total(self) -> None:
+        import tempfile
+
+        from alive_mcp._vendor._pure import tasks_pure
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            parent = pathlib.Path(tmpdir) / "parent"
+            parent_kernel = parent / "_kernel"
+            parent_kernel.mkdir(parents=True)
+            (parent_kernel / "key.md").write_text("---\ntype: venture\n---\n")
+            (parent_kernel / "tasks.json").write_text('{"tasks": []}')
+
+            # Parent's own bundle -- counts in the summary.
+            parent_bundle = parent / "parent-bundle"
+            parent_bundle.mkdir()
+            (parent_bundle / "context.manifest.yaml").write_text(
+                "goal: parent bundle\nstatus: draft\n"
+            )
+
+            # Nested walnut with its own bundle -- must NOT count.
+            child = parent / "child-walnut"
+            child_kernel = child / "_kernel"
+            child_kernel.mkdir(parents=True)
+            (child_kernel / "key.md").write_text("---\ntype: project\n---\n")
+            child_bundle = child / "child-bundle"
+            child_bundle.mkdir()
+            (child_bundle / "context.manifest.yaml").write_text(
+                "goal: child bundle\nstatus: draft\n"
+            )
+
+            summary = tasks_pure.summary_from_walnut(str(parent))
+
+            # Total bundles in the parent's summary must be 1, not 2.
+            self.assertEqual(
+                summary["bundles"]["summary"]["total"], 1,
+                msg="child bundle leaked into summary: {!r}".format(
+                    summary["bundles"]["summary"]
+                ),
+            )
+
+
 class TasksJsonSchemaIsValidated(unittest.TestCase):
     """Regression: ``_read_tasks_json`` must reject non-list ``tasks``.
 

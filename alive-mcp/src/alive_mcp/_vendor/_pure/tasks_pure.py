@@ -230,13 +230,30 @@ _BUNDLE_DISCOVERY_SKIP_DIRS = {
 
 
 def _find_bundles(walnut: str) -> List[Tuple[str, str]]:
-    """Return list of ``(bundle_name, bundle_abs_path)`` for all bundles."""
+    """Return list of ``(bundle_name, bundle_abs_path)`` for all bundles.
+
+    Honors nested-walnut boundaries: a subdirectory with
+    ``_kernel/key.md`` is treated as a child walnut and its interior is
+    never scanned. This mirrors the pattern in
+    ``walnut_paths.find_bundles`` and ``_all_task_files`` so the summary
+    counts stay consistent with the task collection -- a parent walnut's
+    bundle total never includes bundles that live inside a child.
+    """
     bundles: List[Tuple[str, str]] = []
+    walnut_abs = os.path.abspath(walnut)
     for root, dirs, files in os.walk(walnut):
         dirs[:] = [
             d for d in dirs
             if d not in _BUNDLE_DISCOVERY_SKIP_DIRS and not d.startswith(".")
         ]
+        # Nested-walnut boundary: check the filesystem directly -- the
+        # skip-set already prunes ``_kernel`` from ``dirs``, so we can't
+        # rely on a dirs membership check. Root walnut itself is exempt.
+        if os.path.abspath(root) != walnut_abs:
+            kernel_key = os.path.join(root, "_kernel", "key.md")
+            if os.path.isfile(kernel_key):
+                dirs[:] = []
+                continue
         if "context.manifest.yaml" in files:
             bundles.append((os.path.basename(root), root))
         elif "companion.md" in files:
