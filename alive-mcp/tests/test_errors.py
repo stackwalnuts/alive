@@ -148,11 +148,15 @@ class NoAbsolutePathsInMessagesTests(unittest.TestCase):
     zero absolute-path literals.
     """
 
-    # POSIX absolute paths (``/etc``, ``/Users/foo``) and Windows drive
-    # paths (``C:\``, ``D:/``). The ``{placeholders}`` that carry
-    # caller-facing identifiers (walnut, bundle, file, query, tool) are
-    # not absolute paths.
-    POSIX_ABS = re.compile(r"(?:^|[\s'\"`(])/[A-Za-z]")
+    # POSIX absolute paths (``/etc``, ``/Users/foo``, ``/.alive``,
+    # ``/_kernel``) and Windows drive paths (``C:\``, ``D:/``). The
+    # ``{placeholders}`` that carry caller-facing identifiers (walnut,
+    # bundle, file, query, tool) are not absolute paths.
+    #
+    # The POSIX check accepts ``/`` followed by ANY path-like character
+    # (letter, digit, ``.``, ``_``, ``~``) at the boundary of a word so
+    # ``/.alive/`` and ``/_kernel/`` are caught alongside ``/etc/``.
+    POSIX_ABS = re.compile(r"(?:^|[\s'\"`(])/[A-Za-z0-9._~]")
     WINDOWS_ABS = re.compile(r"[A-Za-z]:[\\/]")
 
     def test_no_posix_absolute_path_in_any_message(self) -> None:
@@ -166,6 +170,19 @@ class NoAbsolutePathsInMessagesTests(unittest.TestCase):
                     f"(match={match.group() if match else None})"
                 ),
             )
+
+    def test_no_posix_absolute_path_in_any_suggestion(self) -> None:
+        for code, spec in errors.ERRORS.items():
+            for hint in spec.suggestions:
+                match = self.POSIX_ABS.search(hint)
+                self.assertIsNone(
+                    match,
+                    msg=(
+                        f"Suggestion for {code.value} contains a "
+                        f"POSIX-shaped absolute path: {hint!r} "
+                        f"(match={match.group() if match else None})"
+                    ),
+                )
 
     def test_no_windows_absolute_path_in_any_message(self) -> None:
         for code, spec in errors.ERRORS.items():
@@ -187,6 +204,16 @@ class NoAbsolutePathsInMessagesTests(unittest.TestCase):
                         f"drive path: {hint!r}"
                     ),
                 )
+
+    def test_posix_regex_catches_dotfile_paths(self) -> None:
+        """Regression: the earlier regex missed ``/.alive``-style paths."""
+        self.assertIsNotNone(self.POSIX_ABS.search("see /.alive/config"))
+        self.assertIsNotNone(self.POSIX_ABS.search("wrote /_kernel/log.md"))
+        self.assertIsNotNone(self.POSIX_ABS.search("read /etc/passwd"))
+        # Should NOT flag plain ``/`` used as a separator in
+        # non-absolute contexts (there are none in the codebook but
+        # guard the detector anyway).
+        self.assertIsNone(self.POSIX_ABS.search("a/b/c is a relative path"))
 
 
 class ExceptionToCodeMappingTests(unittest.TestCase):
@@ -277,6 +304,28 @@ class EnvelopeOkShapeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             envelope.ok({"total": 5}, total=10)
 
+    def test_ok_rejects_meta_collision_with_non_dict_payload(self) -> None:
+        """Non-dict payload goes under ``data``; the collision check is unified.
+
+        Python's function-signature check already blocks the literal
+        ``envelope.ok('x', data='y')`` and splat forms that include
+        ``data`` (``TypeError: multiple values for argument``), so the
+        ``data`` key specifically is unreachable from kwargs. The
+        unified collision check in ``ok`` still matters because it
+        confirms the algorithm is the same for both dict and non-dict
+        payloads — future refactors that expose additional reserved
+        keys (e.g. if the non-dict wrapper grew a ``schema`` or ``type``
+        key) would be caught automatically.
+
+        The important shadowing case — dict payload + meta kwarg with
+        the same key — is exercised by the sibling test
+        ``test_ok_raises_on_meta_key_collision``.
+        """
+        # Positive: a plain non-dict payload with non-colliding meta is
+        # accepted and wraps correctly.
+        resp = envelope.ok("payload", total=1)
+        self.assertEqual(resp["structuredContent"], {"data": "payload", "total": 1})
+
     def test_ok_renders_unicode_without_escape(self) -> None:
         """``ensure_ascii=False`` lets bundle/walnut names with unicode pass through."""
         resp = envelope.ok({"name": "北極星"})
@@ -346,6 +395,22 @@ class EnvelopeErrorShapeTests(unittest.TestCase):
         self.assertIn(
             "template missing placeholder", resp["structuredContent"]["message"]
         )
+
+    def test_error_format_spec_mismatch_degrades_gracefully(self) -> None:
+        """Passing a non-numeric for a ``{x:.1f}`` slot must not crash.
+
+        ``ERR_TOOL_TIMEOUT`` uses ``{timeout_s:.1f}`` — pass a string
+        instead of a float and confirm we still get a well-formed
+        envelope instead of a ``ValueError``/``TypeError`` escaping
+        from ``.format()``.
+        """
+        resp = envelope.error(
+            errors.ErrorCode.ERR_TOOL_TIMEOUT, tool="search", timeout_s="not-a-float"
+        )
+        self.assertTrue(resp["isError"])
+        self.assertIn("template formatting error", resp["structuredContent"]["message"])
+        # The raw exception string must NOT be in the message.
+        self.assertNotIn("not-a-float", resp["structuredContent"]["message"])
 
     def test_error_unknown_code_returns_unknown_envelope(self) -> None:
         """Unknown codes degrade to a well-formed ``UNKNOWN`` envelope."""

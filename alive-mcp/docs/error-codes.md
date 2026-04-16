@@ -410,16 +410,29 @@ server that cannot audit should not be serving.
 
 ## Adding new codes
 
-The codebook is intentionally frozen at 9 for v0.1. Adding a new code
-means:
+The codebook is intentionally frozen at 9 for v0.1. The single sources
+of truth are `ErrorCode` (the enum) and `ERRORS` (the enum -> spec
+mapping). `ERROR_CODES` is derived from `tuple(ErrorCode)`, and
+`MESSAGES` / `SUGGESTIONS` are derived projections of `ERRORS` — do
+not hand-edit any of those three.
 
-1. Append a constant to `errors.py` and to `ERROR_CODES`.
-2. Add a template entry to `MESSAGES` and a suggestions entry to
-   `SUGGESTIONS`. The test suite asserts coverage across the frozen
-   set.
-3. Add a matching `AliveMcpError` subclass.
-4. Add a section to this document with cause + example + recovery.
-5. Verify no absolute filesystem path appears in the template.
+Adding a new code means:
+
+1. Add a member to `ErrorCode` in `errors.py`.
+2. Add the matching `ErrorSpec` entry to the `ERRORS` mapping in the
+   same file (supplying `message` and `suggestions`). `ERROR_CODES`,
+   `MESSAGES`, and `SUGGESTIONS` pick it up automatically.
+3. Add a matching `AliveMcpError` subclass (one exception per code is
+   the convention — see `PathEscapeError` and friends).
+4. Add a module-level alias (`ERR_NEW_CODE: ErrorCode =
+   ErrorCode.ERR_NEW_CODE`) if downstream code is expected to import
+   the string-constant form. Existing aliases preserve the T3 API.
+5. Add a section to this document with cause + example + recovery.
+6. Add a kwargs entry for the new code in the
+   `test_error_envelopes_render_for_every_frozen_code` matrix.
+7. Verify no absolute filesystem path appears in the template or
+   suggestions — the `NoAbsolutePathsInMessagesTests` class enforces
+   this.
 
 The 9 codes cover the known v0.1 failure modes. A 10th code is a
 signal that the envelope contract is growing — prefer that over

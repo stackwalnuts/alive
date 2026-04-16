@@ -131,15 +131,21 @@ def ok(data: Any, **meta: Any) -> dict[str, Any]:
     usable data. ``separators=(",", ":")`` keeps the text tight; LLMs
     read JSON fine either way but smaller payloads cost fewer tokens.
     """
-    if isinstance(data, dict) and meta:
-        # Callers occasionally try to tack meta onto a dict payload as
-        # convenience. Fine — but silent shadowing is the failure mode
-        # we refuse to accept.
-        overlap = set(data) & set(meta)
-        if overlap:
-            raise ValueError(
-                f"envelope.ok: meta keys collide with data keys: {sorted(overlap)}"
-            )
+    # Compute the collision set BEFORE any dict unpacking so the
+    # collision check is identical for dict and non-dict payloads. For
+    # non-dict payloads the wrapper injects a ``data`` key, so ``data``
+    # in ``meta`` would silently replace the actual payload — the
+    # exact shadowing bug we refuse to accept.
+    if isinstance(data, dict):
+        payload_keys = set(data)
+    else:
+        payload_keys = {"data"}
+
+    overlap = payload_keys & set(meta)
+    if overlap:
+        raise ValueError(
+            f"envelope.ok: meta keys collide with payload keys: {sorted(overlap)}"
+        )
 
     if isinstance(data, dict):
         structured: dict[str, Any] = {**data, **meta}
@@ -244,6 +250,13 @@ def error(code: errors.CodeLike, **template_kwargs: Any) -> dict[str, Any]:
             # which placeholder was missing so the bug is visible in
             # logs. The envelope is never the failure site.
             message = spec.message + f" (template missing placeholder: {missing_key})"
+        except (ValueError, TypeError, IndexError):
+            # Format-spec mismatch (e.g. ``{timeout_s:.1f}`` with a
+            # non-numeric kwarg, or a malformed spec). Degrade to the
+            # unformatted template — NEVER surface the raw exception
+            # string, that would defeat mask_error_details=True. The
+            # envelope is never the failure site.
+            message = spec.message + " (template formatting error)"
         suggestions = spec.suggestions
 
     structured: dict[str, Any] = {
