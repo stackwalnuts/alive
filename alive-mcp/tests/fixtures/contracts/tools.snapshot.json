@@ -114,6 +114,39 @@
         "openWorldHint": false,
         "readOnlyHint": true
       },
+      "description": "List recent squirrel sessions from .alive/_squirrels/. Optionally filter by walnut path. Returns newest first.",
+      "inputSchema": {
+        "properties": {
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "walnut": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Walnut"
+          }
+        },
+        "title": "list_sessionsArguments",
+        "type": "object"
+      },
+      "name": "list_sessions"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
       "description": "List tasks for a walnut or a specific bundle. When bundle is omitted, returns every task from kernel-level tasks.json plus each bundle's tasks.json. When bundle is supplied, returns only that bundle's tasks. Returns {tasks:[...], counts:{urgent,active,todo,blocked,done}}.",
       "inputSchema": {
         "properties": {
@@ -282,6 +315,29 @@
         "title": "read_logOutput",
         "type": "object"
       }
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "description": "Read the full content of a specific squirrel session entry by session ID. Returns the parsed YAML fields including stash items, working files, and actions.",
+      "inputSchema": {
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "title": "read_sessionArguments",
+        "type": "object"
+      },
+      "name": "read_session"
     },
     {
       "annotations": {

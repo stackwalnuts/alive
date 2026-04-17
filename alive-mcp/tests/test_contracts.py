@@ -322,7 +322,7 @@ class ContractFixtureShapeTests(unittest.TestCase):
     snapshot diff.
     """
 
-    def test_tools_snapshot_has_exactly_ten_frozen_tools(self) -> None:
+    def test_tools_snapshot_has_expected_tool_count(self) -> None:
         import json
 
         path = _CONTRACTS_DIR / "tools.snapshot.json"
@@ -331,11 +331,11 @@ class ContractFixtureShapeTests(unittest.TestCase):
         self.assertIn("tools", data)
         self.assertEqual(
             len(data["tools"]),
-            10,
+            12,
             msg=(
-                "v0.1 roster is frozen at exactly 10 tools. "
-                "Adding/removing a tool requires an epic-level decision "
-                "and updated snapshot fixture."
+                "v0.1 roster: 10 original + 2 session tools (list_sessions, "
+                "read_session). Adding/removing a tool requires updated "
+                "snapshot fixture."
             ),
         )
         expected_names = {
@@ -349,6 +349,8 @@ class ContractFixtureShapeTests(unittest.TestCase):
             "search_walnut",
             "read_log",
             "list_tasks",
+            "list_sessions",
+            "read_session",
         }
         actual_names = {t["name"] for t in data["tools"]}
         self.assertEqual(actual_names, expected_names)

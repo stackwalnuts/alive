@@ -1196,12 +1196,14 @@ def build_server() -> FastMCP[AppContext]:
     from alive_mcp.tools import bundle as _bundle_tools  # noqa: E402
     from alive_mcp.tools import log_and_tasks as _log_task_tools  # noqa: E402
     from alive_mcp.tools import search as _search_tools  # noqa: E402
+    from alive_mcp.tools import session as _session_tools  # noqa: E402
     from alive_mcp.tools import walnut as _walnut_tools  # noqa: E402
 
     _walnut_tools.register(server)
     _bundle_tools.register(server)
     _search_tools.register(server)
     _log_task_tools.register(server)
+    _session_tools.register(server)
 
     # Register the kernel-file resource surface (T10). This REPLACES
     # FastMCP's default ``list_resources`` / ``read_resource`` handlers
