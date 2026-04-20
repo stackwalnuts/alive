@@ -22,15 +22,19 @@ Each source file is pinned at the commit that most recently touched it on the
 
 | Source file          | Upstream commit                            |
 |----------------------|--------------------------------------------|
-| `walnut_paths.py`    | `525ab597caa8442c428f334e3dc3fca2d791813d` |
+| `walnut_paths.py`    | `5807be7bc9f472c1dfb7b08df6bb484e23c9f400` |
 | `project.py`         | `f91553c1796726eb3eb40490bd2056f3c99f7459` |
 | `tasks.py`           | `2e3d77e1bff47fa620e0dfb8273b033ab98cd520` |
 
-The commit for `walnut_paths.py` was resolved from the primary worktree's
-`main` branch; it is `feat(p2p-v3): port crypto/tar/sig foundations +
-walnut_paths module`. The file lands in `main` ahead of the alive-mcp-v0.1
-branch and is not yet present on the branch at task-claim time, which is
-expected -- T2 vendors it directly from `main`.
+`walnut_paths.py` was introduced to `main` by the PR #32 squash-merge
+(`feat: P2P sharing layer for v3 -- share, receive, relay (supersedes
+#27)`) on 2026-04-20. The original commit `525ab597` on the `fn-7-7cw`
+branch was collapsed into the squash commit `5807be7` and is no longer
+part of `main`'s linear history; the pin was updated to the squash
+commit at that time. File content is unchanged (byte-identical to the
+`525ab597` tree). The byte-identity smoke test
+(`tests/test_vendor_smoke.py::DirectCopyIsByteIdentical`) continues to
+pass against the new upstream location.
 
 ## Direct copy
 
