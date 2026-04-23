@@ -1,4 +1,4 @@
-name: Claude PII Review (internal)
+name: Claude PII Review
 
 on:
   pull_request:
@@ -12,15 +12,14 @@ on:
 
 jobs:
   pii-review:
-    # Runs only on internal-team PRs. External contributors are handled by
-    # claude-code-review.yml. Drafts are skipped. Per-PR opt-out via the
-    # `no-pii-review` label. workflow_dispatch bypasses the filter.
+    # Runs on every non-draft PR. Per-PR opt-out via the `no-pii-review` label.
+    # workflow_dispatch bypasses the filter. Complementary to claude-code-review
+    # (general review) -- both bots post separate sticky comments.
     if: |
       github.event_name == 'workflow_dispatch' ||
       (
         github.event.pull_request.draft == false &&
-        !contains(github.event.pull_request.labels.*.name, 'no-pii-review') &&
-        contains(fromJson('["benslockedin","patrickSupernormal","willsupernormal"]'), github.event.pull_request.user.login)
+        !contains(github.event.pull_request.labels.*.name, 'no-pii-review')
       )
 
     runs-on: ubuntu-latest
